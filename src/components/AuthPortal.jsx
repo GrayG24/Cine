@@ -4,17 +4,19 @@ import {
   auth, 
   db 
 } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInAnonymously,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  updateProfile
 } from 'firebase/auth';
 import { 
   Mail, 
   Lock, 
+  User,
   UserPlus, 
   UserCheck, 
   ShieldAlert, 
@@ -24,11 +26,13 @@ import {
   Loader2, 
   Sparkles,
   ChevronRight,
-  Info
+  Info,
+  Trophy,
+  Zap
 } from 'lucide-react';
 
-const AuthPortal = ({ isOpen, onClose, addNotification }) => {
-  const [activeTab, setActiveTab] = useState('login'); // 'login', 'register', 'guest'
+const AuthPortal = ({ isOpen, onClose, addNotification, isFirstTime = false }) => {
+  const [activeTab, setActiveTab] = useState(isFirstTime ? 'register' : 'login'); // 'login', 'register', 'guest'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -66,8 +70,19 @@ const AuthPortal = ({ isOpen, onClose, addNotification }) => {
         }
 
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        if (username.trim()) {
+          try {
+            await updateProfile(userCred.user, { displayName: username.trim() });
+            await setDoc(doc(db, 'users', userCred.user.uid), {
+              username: username.trim(),
+              hasSetProfile: true
+            }, { merge: true });
+          } catch (pErr) {
+            console.warn('Username profile update error:', pErr);
+          }
+        }
         if (addNotification) {
-          addNotification('ACCOUNT CREATED', 'Welcome to Classroom 9X!', 'success');
+          addNotification('ACCOUNT CREATED', `Welcome to Classroom 9X${username ? ', ' + username : ''}!`, 'success');
         }
         onClose();
       }
@@ -155,14 +170,27 @@ const AuthPortal = ({ isOpen, onClose, addNotification }) => {
         className="relative w-full max-w-sm bg-zinc-950/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl"
       >
         {/* Header Section */}
-        <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
+        <div className="p-6 border-b border-zinc-800 flex items-start justify-between">
           <div>
-            <span className="text-[10px] font-sans font-black text-primary uppercase tracking-[0.2em] italic">SIGN IN</span>
-            <h3 className="text-xl font-bold font-sans text-white tracking-tight mt-1">Classroom 9X</h3>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-sans font-black uppercase tracking-wider mb-2">
+              <Sparkles size={11} />
+              <span>{isFirstTime ? 'WELCOME NEW PLAYER' : 'ACCOUNT ACCESS'}</span>
+            </div>
+            <h3 className="text-xl font-bold font-sans text-white tracking-tight">
+              {isFirstTime ? 'Join Classroom 9X' : 'Classroom 9X Portal'}
+            </h3>
+            <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
+              {activeTab === 'register' 
+                ? 'Create an account to save XP, badges, and highscores.' 
+                : activeTab === 'login' 
+                ? 'Sign in to access your saved profile and achievements.' 
+                : 'Explore games immediately in guest mode.'}
+            </p>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 hover:bg-white/5 rounded-lg transition-all text-white/50 hover:text-white"
+            className="p-1.5 hover:bg-white/5 rounded-lg transition-all text-white/50 hover:text-white shrink-0 ml-2"
+            title="Close"
           >
             <X size={18} />
           </button>
@@ -171,17 +199,6 @@ const AuthPortal = ({ isOpen, onClose, addNotification }) => {
         {/* Tab Selector */}
         <div className="flex border-b border-zinc-800">
           <button
-            onClick={() => { setActiveTab('login'); setError(''); }}
-            className={`flex-1 py-3 text-xs font-mono font-bold tracking-widest uppercase transition-colors relative ${
-              activeTab === 'login' ? 'text-primary' : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            Log In
-            {activeTab === 'login' && (
-              <motion.div layoutId="auth-tab-bar" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-          <button
             onClick={() => { setActiveTab('register'); setError(''); }}
             className={`flex-1 py-3 text-xs font-mono font-bold tracking-widest uppercase transition-colors relative ${
               activeTab === 'register' ? 'text-primary' : 'text-zinc-500 hover:text-zinc-300'
@@ -189,6 +206,17 @@ const AuthPortal = ({ isOpen, onClose, addNotification }) => {
           >
             Create Account
             {activeTab === 'register' && (
+              <motion.div layoutId="auth-tab-bar" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => { setActiveTab('login'); setError(''); }}
+            className={`flex-1 py-3 text-xs font-mono font-bold tracking-widest uppercase transition-colors relative ${
+              activeTab === 'login' ? 'text-primary' : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            Sign In
+            {activeTab === 'login' && (
               <motion.div layoutId="auth-tab-bar" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
             )}
           </button>
@@ -224,6 +252,24 @@ const AuthPortal = ({ isOpen, onClose, addNotification }) => {
           {/* Form Handling (Login & Register) */}
           {(activeTab === 'login' || activeTab === 'register') && (
             <form onSubmit={handleEmailAuth} className="space-y-4">
+              {activeTab === 'register' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-sans font-black text-zinc-500 uppercase tracking-widest">DISPLAY USERNAME</label>
+                  <div className="relative">
+                    <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input 
+                      type="text"
+                      required
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      disabled={loading}
+                      placeholder="e.g. CyberNinja, NeonGamer"
+                      className="w-full h-11 pl-10 pr-4 bg-zinc-900 border border-zinc-800 focus:border-primary rounded-xl text-xs font-sans text-white placeholder-zinc-600 outline-none transition-all duration-200"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-sans font-black text-zinc-500 uppercase tracking-widest">EMAIL ADDRESS</label>
                 <div className="relative">
@@ -259,14 +305,14 @@ const AuthPortal = ({ isOpen, onClose, addNotification }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 bg-primary text-black font-sans font-black text-xs uppercase tracking-widest rounded-xl hover:bg-opacity-90 disabled:bg-zinc-800 disabled:text-zinc-500 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_20px_rgba(var(--primary-rgb),0.25)]"
+                className="w-full h-11 bg-primary text-black font-sans font-black text-xs uppercase tracking-widest rounded-xl hover:bg-opacity-90 disabled:bg-zinc-800 disabled:text-zinc-500 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_20px_rgba(var(--primary-rgb),0.25)] mt-2"
               >
                 {loading ? (
                   <Loader2 size={16} className="animate-spin text-black" />
                 ) : activeTab === 'login' ? (
                   <>
                     <UserCheck size={16} />
-                    Log In
+                    Sign In
                   </>
                 ) : (
                   <>
@@ -275,6 +321,27 @@ const AuthPortal = ({ isOpen, onClose, addNotification }) => {
                   </>
                 )}
               </button>
+
+              {/* Quick switch between login and register */}
+              <div className="pt-2 text-center">
+                {activeTab === 'login' ? (
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('register'); setError(''); }}
+                    className="text-xs text-zinc-400 hover:text-primary transition-colors cursor-pointer"
+                  >
+                    Need an account? <span className="font-bold underline">Create Account</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('login'); setError(''); }}
+                    className="text-xs text-zinc-400 hover:text-primary transition-colors cursor-pointer"
+                  >
+                    Already have an account? <span className="font-bold underline">Sign In</span>
+                  </button>
+                )}
+              </div>
             </form>
           )}
 

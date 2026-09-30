@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AppRoute, GAMES_DATA, BADGES, QUEST_POOL, CHARACTERS } from './constants.js';
+import { AppRoute, GAMES_DATA, BADGES, QUEST_POOL, CHARACTERS, isPlatformOwner } from './constants.js';
 import { Layout } from './components/Layout';
 import { Home } from './components/Home';
 import { GameModal } from './components/GameModal';
@@ -8,34 +8,45 @@ import { MiniProfile } from './components/MiniProfile';
 import { CategoryPage } from './components/CategoryPage';
 import { Library } from './components/Library';
 import { Settings } from './components/Settings';
-import { Customization } from './components/Customization';
 import { Leaderboard } from './components/Leaderboard';
 import { LeaderboardWidget } from './components/LeaderboardWidget';
-import { GlobalChat } from './components/GlobalChat';
-import { InitialNameModal } from './components/InitialNameModal';
 import AuthPortal from './components/AuthPortal';
 import { EducationalCloak } from './components/EducationalCloak';
-import { AdminPanel } from './components/AdminPanel';
 import { AppsPage } from './components/AppsPage';
+import { SpotifyPage } from './components/SpotifyPage';
+import { GlobalChatPage } from './components/GlobalChatPage';
+import { CineCinemaPage } from './components/CineCinemaPage';
+import { CineStreamPage } from './components/CineStreamPage';
 import { ProxyPage } from './components/ProxyPage';
 import { CodesPage } from './components/CodesPage';
-import SummerCountdown from './components/SummerCountdown';
 import MusicPage from './components/MusicPage';
-import { Footer } from './components/Footer';
+import { OwnerPortalPage } from './components/OwnerPortalPage';
+import { AccountPage, calculateTotalExp } from './components/AccountPage';
+import { AnnouncementBroadcastModal } from './components/AnnouncementBroadcastModal';
+import { ReportModal } from './components/ReportModal';
 import { LoadingScreen } from './components/LoadingScreen';
 import { InteractiveBackground } from './components/InteractiveBackground';
 import { GameView } from './components/GameView';
-import { Bell, Star, Zap, Shield, Trophy, Palette, Layers, Bot, X, Crown, ZapOff, ShieldAlert, MessageSquare, Users, Send, Trash2, Megaphone, Settings as SettingsIcon, Activity, Sparkles, Ghost, BrainCircuit, Rocket, Plus, Award, Flame, User, AlertTriangle, Lock, Play, Waves, ChevronRight, Pin } from 'lucide-react';
+import { Bell, Star, Zap, Shield, Trophy, Palette, Layers, Bot, X, Crown, ZapOff, ShieldAlert, MessageSquare, Users, Send, Trash2, Megaphone, Settings as SettingsIcon, Activity, Sparkles, Ghost, BrainCircuit, Rocket, Plus, Award, Flame, User, AlertTriangle, Lock, Play, Waves, ChevronRight, Pin, Hammer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, GoogleAuthProvider, signOut, signInWithRedirect, getRedirectResult, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, updateDoc, collection, query, orderBy, limit, serverTimestamp, getDocFromServer } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, updateDoc, collection, query, orderBy, limit, serverTimestamp, getDocFromServer, addDoc, deleteDoc } from 'firebase/firestore';
 
 import { filterProfanity } from './lib/profanity';
+import { 
+  safeLocalStorageGet, 
+  safeLocalStorageGetJSON,
+  safeLocalStorageSet, 
+  safeLocalStorageRemove, 
+  safeSessionStorageGet, 
+  safeSessionStorageSet, 
+  safeStoreUserProfile 
+} from './lib/storage';
 
 const EXP_PER_PLAY = 25;
-const LEVEL_UP_BASE = 200;
+const LEVEL_UP_BASE = 80;
 
 const OperationType = {
   CREATE: 'create',
@@ -49,9 +60,11 @@ const OperationType = {
 function handleFirestoreError(error, operationType, path) {
   const errorMsg = error instanceof Error ? error.message : String(error);
   
-  if (errorMsg.includes('resource-exhausted') || errorMsg.includes('Quota exceeded')) {
+  if (errorMsg.includes('resource-exhausted') || errorMsg.includes('Quota exceeded') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
     window.isFirestoreQuotaExceeded = true;
     window.dispatchEvent(new CustomEvent('firestore-quota-exceeded'));
+    console.warn('Firestore Quota Exceeded for', operationType, path);
+    return;
   }
 
   const errInfo = {
@@ -66,7 +79,6 @@ function handleFirestoreError(error, operationType, path) {
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
 }
 
 const LockedPage = ({ title, onReturn }) => (
@@ -105,15 +117,20 @@ const getRandomQuests = (pool, count) => {
 
 const DEFAULT_USER = {
   username: 'Player',
-  email: 'softball_chik_007@yahoo.com',
+  email: '',
   exp: 0,
+  totalExp: 0,
   level: 1,
   gamesPlayed: 0,
+  bio: '',
   currentTheme: 'void',
-  unlockedThemes: ['void', 'cyan', 'black-white'],
+  unlockedThemes: ['void', 'cyan'],
   currentFrame: 'default',
   unlockedFrames: ['default'],
   currentCharacter: 'agent-x',
+  customAvatar: null,
+  currentBanner: 'default',
+  unlockedBanners: ['default'],
   unlockedCharacters: ['agent-x'],
   unlockedCursors: ['default'],
   unlockedBadges: [],
@@ -121,6 +138,9 @@ const DEFAULT_USER = {
   favorites: [],
   pinnedGames: [],
   featuredBadgeId: null,
+  dailyExp: {},
+  dailyGames: {},
+  lastActiveDate: new Date().toISOString().split('T')[0],
   score: 0,
   uid: 'user-' + Math.random().toString(36).substr(2, 9),
   hasSetProfile: false,
@@ -133,18 +153,19 @@ const DEFAULT_USER = {
     bg: '#020617'
   },
   settings: {
+    sidebarAutoHide: false,
+    notifications: true,
+    displayProfileBadges: true,
     customCursor: false,
     cursorStyle: 'default',
     animatedBg: true,
     uiOpacity: 0.8,
-    notifications: true,
     homeBanner: true,
     performanceMode: false,
     hideUnreleased: true,
     showFPS: false,
     reduceMotion: false,
     lowQualityParticles: false,
-    sidebarAutoHide: true,
     backgroundEffects: true,
     interactiveBg: true,
     disableGlow: false,
@@ -534,125 +555,27 @@ const ExpRain = ({ onCollect }) => {
 };
 
 
-const WaveTransition = ({ isVisible, onComplete }) => {
-  return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          id="summer-wave-transition"
-          initial={{ y: '100%' }}
-          animate={{ y: '-100%' }}
-          exit={{ opacity: 0 }}
-          transition={{ 
-            duration: 2, 
-            ease: [0.75, 0, 0.25, 1]
-          }}
-          onAnimationComplete={onComplete}
-          className="fixed inset-0 z-[10000] pointer-events-none"
-        >
-          {/* Refraction Overlay - cinematic light bending */}
-          <div className="absolute inset-0 bg-sky-400/10 backdrop-blur-[2px] opacity-0 animate-[fade-in_1s_ease-out_forwards]" />
-
-          {/* Main Water Body */}
-          <div className="absolute inset-x-0 bottom-[-100%] h-[300%] bg-[#0ea5e9]">
-             {/* Deep Gradient */}
-             <div className="absolute inset-0 bg-gradient-to-b from-[#38bdf8] via-[#0ea5e9] to-[#1d4ed8]" />
-             
-             {/* Light Rays - Beaming through the water */}
-             <div className="absolute inset-0 opacity-30">
-                {[...Array(6)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ 
-                      opacity: [0.2, 0.5, 0.2],
-                      rotate: [i * 15 - 45, i * 15 - 35, i * 15 - 45]
-                    }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-0 w-32 h-[200%] bg-white/20 blur-[60px] origin-top"
-                    style={{ left: `${15 + i * 15}%` }}
-                  />
-                ))}
-             </div>
-
-             {/* Dynamic Foam Crest (Multiple layers) */}
-             <div className="absolute top-0 inset-x-0 h-[20vh] -translate-y-[90%]">
-                <svg viewBox="0 0 1440 120" className="absolute bottom-0 left-0 w-full fill-white/80 blur-sm">
-                   <motion.path 
-                     animate={{ d: [
-                       "M0,80 C240,120 480,40 720,80 C960,120 1200,40 1440,80 L1440,120 L0,120 Z",
-                       "M0,60 C240,20 480,100 720,60 C960,20 1200,100 1440,60 L1440,120 L0,120 Z",
-                       "M0,80 C240,120 480,40 720,80 C960,120 1200,40 1440,80 L1440,120 L0,120 Z"
-                     ] }}
-                     transition={{ duration: 3, repeat: Infinity }}
-                   />
-                </svg>
-                <svg viewBox="0 0 1440 120" className="absolute bottom-0 left-0 w-full fill-white">
-                   <motion.path 
-                     animate={{ d: [
-                       "M0,100 C240,60 480,140 720,100 C960,60 1200,140 1440,100 L1440,120 L0,120 Z",
-                       "M0,80 C240,120 480,40 720,80 C960,120 1200,40 1440,80 L1440,120 L0,120 Z",
-                       "M0,100 C240,60 480,140 720,100 C960,60 1200,140 1440,100 L1440,120 L0,120 Z"
-                     ] }}
-                     transition={{ duration: 2, repeat: Infinity }}
-                   />
-                </svg>
-             </div>
-
-             {/* Dramatic Text & Icon */}
-             <div className="absolute inset-x-0 top-0 h-screen flex flex-col items-center justify-center pointer-events-none p-12">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6, duration: 1 }}
-                  className="relative mb-12"
-                >
-                  <Waves size={240} className="text-white drop-shadow-[0_0_80px_rgba(255,255,255,0.6)]" />
-                  <div className="absolute inset-0 bg-white/10 rounded-full blur-[100px] animate-pulse" />
-                </motion.div>
-                
-                <h2 className="text-7xl md:text-[12rem] font-black text-white italic tracking-tighter uppercase drop-shadow-[0_20px_80px_rgba(0,0,0,0.5)] text-center leading-[0.75] max-w-6xl">
-                  Diving <br /> <span className="text-sky-200">Into Summer</span>
-                </h2>
-             </div>
-          </div>
-
-          {/* Bubbles / Ambient Particles */}
-          {[...Array(60)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ x: `${Math.random() * 100}%`, y: '100%', scale: 0 }}
-              animate={{ y: '-20%', scale: [0, 1, 0.5, 0], opacity: [0, 1, 1, 0] }}
-              transition={{ duration: 2.5 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }}
-              className="absolute w-4 h-4 bg-white/30 rounded-full blur-[2px]"
-            />
-          ))}
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
-
 const App = () => {
-  const gameOfTheWeek = useMemo(() => {
+  const dailyGame = useMemo(() => {
     if (!GAMES_DATA || GAMES_DATA.length === 0) return { id: 'ovo-classic', name: 'OvO' };
     
-    const date = new Date();
-    const estString = date.toLocaleString("en-US", { timeZone: "America/New_York" });
+    const now = new Date();
+    const estString = now.toLocaleString("en-US", { timeZone: "America/New_York" });
     const estDate = new Date(estString);
     
-    const daysSinceSaturday = (estDate.getDay() + 1) % 7;
-    const currentSaturday = new Date(estDate);
-    currentSaturday.setDate(estDate.getDate() - daysSinceSaturday);
-    currentSaturday.setHours(0, 0, 0, 0);
+    // Calendar days since epoch in America/New_York (EST/EDT)
+    const estDayTimestamp = Date.UTC(estDate.getFullYear(), estDate.getMonth(), estDate.getDate());
+    const dayIndex = Math.floor(estDayTimestamp / (1000 * 60 * 60 * 24));
     
-    const weekIndex = Math.floor(currentSaturday.getTime() / (1000 * 60 * 60 * 24 * 7));
-    const index = Math.abs(weekIndex) % GAMES_DATA.length;
+    const index = Math.abs(dayIndex) % GAMES_DATA.length;
     const game = GAMES_DATA[index];
-    return { id: game.id, name: game.title };
+    return { id: game.id, name: game.title, description: game.description, thumbnail: game.thumbnail };
   }, []);
 
+  const [customDailyGame, setCustomDailyGame] = useState(null);
+  const activeDailyGame = customDailyGame || dailyGame;
+
   const [currentView, setCurrentView] = useState(AppRoute.HOME);
-  const [showWaveTransition, setShowWaveTransition] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const isLoggingIn = useRef(false);
@@ -680,14 +603,28 @@ const App = () => {
     };
   }, []);
 
-  // Global Site Settings Listener (Maintenance, Game of the Week, Announcements)
+  const [lockedGames, setLockedGames] = useState({});
+  const [directChatUser, setDirectChatUser] = useState(null);
+
+  const [countOwnerOnLeaderboard, setCountOwnerOnLeaderboard] = useState(false);
+
+  // Global Site Settings Listener (Maintenance, Daily Game, Announcements, Game Locks, Owner Leaderboard Count)
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setIsMaintenanceMode(data.isMaintenanceMode || false);
-        if (data.gameOfTheWeekId) {
-          setGameOfTheWeek({ id: data.gameOfTheWeekId, name: data.gameOfTheWeekName });
+        setCountOwnerOnLeaderboard(data.countOwnerOnLeaderboard === true);
+        if (data.dailyGameId || data.gameOfTheWeekId) {
+          setCustomDailyGame({ 
+            id: data.dailyGameId || data.gameOfTheWeekId, 
+            name: data.dailyGameName || data.gameOfTheWeekName 
+          });
+        }
+        if (data.lockedGames) {
+          setLockedGames(data.lockedGames);
+        } else {
+          setLockedGames({});
         }
       }
     }, (error) => {
@@ -696,32 +633,79 @@ const App = () => {
     return () => unsub();
   }, []);
 
-  const [isAuthPortalOpen, setIsAuthPortalOpen] = useState(false);
+  const handleToggleCountOwner = async () => {
+    try {
+      const nextVal = !countOwnerOnLeaderboard;
+      setCountOwnerOnLeaderboard(nextVal);
+      await setDoc(doc(db, 'settings', 'global'), {
+        countOwnerOnLeaderboard: nextVal
+      }, { merge: true });
+      addNotification(
+        'LEADERBOARD UPDATED',
+        nextVal 
+          ? 'Owner account is now counted on the leaderboard.' 
+          : 'Owner account hidden from leaderboard. 2nd place has ranked up to 1st place!',
+        'success'
+      );
+    } catch (err) {
+      console.error('Failed to toggle owner leaderboard count:', err);
+      addNotification('UPDATE FAILED', 'Could not update leaderboard setting.', 'error');
+    }
+  };
 
-  const handleLogin = () => {
-    setIsAuthPortalOpen(true);
+  const [isAuthPortalOpen, setIsAuthPortalOpen] = useState(false);
+  const [isFirstTimeVisitor, setIsFirstTimeVisitor] = useState(false);
+
+  // Close sign in portal immediately if user is already signed in
+  useEffect(() => {
+    if (firebaseUser && !firebaseUser.isAnonymous) {
+      setIsAuthPortalOpen(false);
+    }
+  }, [firebaseUser]);
+
+  // Sign in page ONLY appears if user is NOT signed in
+  useEffect(() => {
+    if (isAuthLoading) return;
+    const hasSeenWelcome = safeSessionStorageGet('classroom9x_welcome_prompted');
+    if ((!firebaseUser || firebaseUser.isAnonymous) && !hasSeenWelcome) {
+      setIsFirstTimeVisitor(true);
+      setIsAuthPortalOpen(true);
+      safeSessionStorageSet('classroom9x_welcome_prompted', 'true');
+    }
+  }, [isAuthLoading, firebaseUser]);
+
+  const handleLogin = (isFirst = false) => {
+    // Only open sign in modal if not signed in
+    if (!firebaseUser || firebaseUser.isAnonymous) {
+      setIsFirstTimeVisitor(isFirst);
+      setIsAuthPortalOpen(true);
+    } else {
+      addNotification('ALREADY SIGNED IN', `You are signed in as ${firebaseUser.displayName || firebaseUser.email || 'Player'}.`, 'info');
+    }
   };
 
   const handleLogout = () => signOut(auth);
 
   const handleViewChange = (newView, param = null) => {
-    if (newView === AppRoute.ADMIN) {
-      setIsAdminPanelOpen(prev => !prev);
-      return;
-    }
-
     setSearchQuery('');
-    setSelectedCategoryId(param || null);
-
-    if (newView === AppRoute.SUMMER && currentView !== AppRoute.SUMMER) {
-      if (showWaveTransition) return;
-      setShowWaveTransition(true);
-      // Wait for the wave to cover the screen (middle of 2s transition)
-      setTimeout(() => setCurrentView(newView), 1000);
-    } else {
-      setCurrentView(newView);
-      if (isAdminPanelOpen) setIsAdminPanelOpen(false);
+    if (typeof param === 'string') {
+      setSelectedCategoryId(param);
+    } else if (param && param.targetUser) {
+      setDirectChatUser(param.targetUser);
+    } else if (newView !== AppRoute.CHAT) {
+      setDirectChatUser(null);
     }
+    if (newView !== AppRoute.ACCOUNT) {
+      setViewingProfileUser(null);
+    }
+    setCurrentView(newView);
+  };
+
+  const handleViewProfile = (targetUser) => {
+    if (!targetUser) return;
+    setViewingProfileUser(targetUser);
+    setSelectedPlayer(null);
+    setCurrentView(AppRoute.ACCOUNT);
   };
   
   useEffect(() => {
@@ -740,9 +724,8 @@ const App = () => {
 
   // Sync unlocks and check for admin status
   useEffect(() => {
-    const themeUnlocks = { 10: 'emerald', 25: 'rose' };
+    const themeUnlocks = { 10: 'emerald' };
     const frameUnlocks = { 5: 'neon', 15: 'emerald', 30: 'gold', 60: 'solar', 100: 'interstellar' };
-    const charUnlocks = { 15: 'viper', 30: 'ghost', 50: 'phantom', 75: 'titan', 90: 'nova', 100: 'overlord' };
 
     setUser(prev => {
       let updated = false;
@@ -766,13 +749,6 @@ const App = () => {
         }
       });
 
-      Object.entries(charUnlocks).forEach(([lvl, char]) => {
-        if (prev.level >= parseInt(lvl) && !unlockedCharacters.includes(char)) {
-          unlockedCharacters.push(char);
-          updated = true;
-        }
-      });
-
       if (updated || isAdmin !== prev.isAdmin) {
         return { 
           ...prev, 
@@ -789,27 +765,25 @@ const App = () => {
   useEffect(() => {
     const root = document.documentElement;
     const themes = {
-      cyan: { primary: '#22d3ee', glow: 'rgba(34, 211, 238, 0.6)' },
-      emerald: { primary: '#34d399', glow: 'rgba(52, 211, 153, 0.6)' },
-      violet: { primary: '#a78bfa', glow: 'rgba(167, 139, 250, 0.6)' },
-      cobalt: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.6)' },
-      gold: { primary: '#fbbf24', glow: 'rgba(251, 191, 36, 0.8)' },
-      fire: { primary: '#ef4444', glow: 'rgba(239, 68, 68, 0.6)' },
-      rainbow: { primary: '#ff00ff', glow: 'rgba(255, 0, 255, 0.6)' },
-      tester: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.6)' },
-      owner: { primary: '#facc15', glow: 'rgba(250, 204, 21, 0.8)' },
-      'black-white': { primary: '#ffffff', glow: 'rgba(255, 255, 255, 0.4)' },
-      galaxy: { primary: '#c084fc', glow: 'rgba(192, 132, 252, 0.6)' },
-      supernova: { primary: '#ff8c00', glow: 'rgba(255, 140, 0, 0.8)' },
-      hologram: { primary: '#00ffff', glow: 'rgba(0, 255, 255, 0.6)' },
-      ironman: { primary: '#ef4444', glow: 'rgba(239, 68, 68, 0.6)' },
-      spongebob: { primary: '#facc15', glow: 'rgba(250, 204, 21, 0.6)' },
-      kanye: { primary: '#d8b4fe', glow: 'rgba(216, 180, 254, 0.6)' },
-      synthwave: { primary: '#ff00ff', glow: 'rgba(255, 0, 255, 0.6)' },
-      usa: { primary: '#ef4444', glow: 'rgba(239, 68, 68, 0.6)' },
-      retrofuture: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.6)' },
-      void: { primary: '#ffffff', glow: 'rgba(255, 255, 255, 0.4)' },
-      doge: { primary: '#f2a900', glow: 'rgba(242, 169, 0, 0.6)' }
+      cyan: { primary: '#00f2ff', glow: 'rgba(0, 242, 255, 0.4)' },
+      emerald: { primary: '#39ff14', glow: 'rgba(57, 255, 20, 0.4)' },
+      violet: { primary: '#bf80ff', glow: 'rgba(191, 128, 255, 0.4)' },
+      cobalt: { primary: '#2563eb', glow: 'rgba(37, 99, 235, 0.4)' },
+      gold: { primary: '#ffd700', glow: 'rgba(255, 215, 0, 0.8)' },
+      fire: { primary: '#ff4500', glow: 'rgba(255, 69, 0, 0.6)' },
+      rainbow: { primary: '#f43f5e', glow: 'rgba(244, 63, 94, 0.4)' },
+      tester: { primary: '#ff2a85', glow: 'rgba(255, 42, 133, 0.4)' },
+      owner: { primary: '#fbbf24', glow: 'rgba(251, 191, 36, 0.8)' },
+      galaxy: { primary: '#d946ef', glow: 'rgba(217, 70, 239, 0.4)' },
+      hologram: { primary: '#a5f3fc', glow: 'rgba(165, 243, 252, 0.4)' },
+      ironman: { primary: '#dc2626', glow: 'rgba(220, 38, 38, 0.4)' },
+      spongebob: { primary: '#fde047', glow: 'rgba(253, 224, 71, 0.4)' },
+      kanye: { primary: '#c084fc', glow: 'rgba(192, 132, 252, 0.4)' },
+      synthwave: { primary: '#ff007f', glow: 'rgba(255, 0, 127, 0.4)' },
+      usa: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+      void: { primary: '#f4f4f5', glow: 'rgba(244, 244, 245, 0.4)' },
+      glitch: { primary: '#ff00ff', glow: 'rgba(255, 0, 255, 0.4)' },
+      doge: { primary: '#d97706', glow: 'rgba(217, 119, 6, 0.4)' }
     };
 
     const theme = user.currentTheme === 'custom' ? user.customTheme : themes[user.currentTheme] || themes.cyan;
@@ -830,6 +804,20 @@ const App = () => {
   useEffect(() => {
     const handlePlayGame = (e) => {
       const game = e.detail;
+      if (!game) return;
+
+      const gameLock = lockedGames[game.id];
+      const isOwnerUser = isPlatformOwner(user, firebaseUser || auth.currentUser);
+
+      if (gameLock && (gameLock.isLocked || gameLock.isBroken) && !isOwnerUser) {
+        addNotification(
+          'GAME UNAVAILABLE',
+          gameLock.reason || (gameLock.isBroken ? 'This game has been reported broken and is temporarily locked for maintenance.' : 'This title is temporarily locked by the platform owner.'),
+          'warning'
+        );
+        return;
+      }
+
       setPlayingGame(game);
       setActiveGame(null);
       
@@ -844,7 +832,7 @@ const App = () => {
     };
     window.addEventListener('play-game', handlePlayGame);
     return () => window.removeEventListener('play-game', handlePlayGame);
-  }, []);
+  }, [lockedGames, firebaseUser, user]);
   const [chatMessages, setChatMessages] = useState([
     { username: 'SYSTEM', text: 'WELCOME TO CLASSROOM 9X.', timestamp: new Date().toISOString() },
     { username: 'ADMIN', text: 'NEW UPDATE IS NOW LIVE. ENJOY THE GAMES.', timestamp: new Date().toISOString() }
@@ -867,13 +855,14 @@ const App = () => {
     return () => window.removeEventListener('firestore-quota-exceeded', handleQuota);
   }, []);
 
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [adminAnnouncement, setAdminAnnouncement] = useState(null);
-  const [showInitialModal, setShowInitialModal] = useState(false);
-  const [initialModalError, setInitialModalError] = useState(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isCloaked, setIsCloaked] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isCloaked, setIsCloaked] = useState(() => {
+    try {
+      return sessionStorage.getItem('cine_uncloaked') !== 'true';
+    } catch {
+      return true;
+    }
+  });
   const [isExitingCloak, setIsExitingCloak] = useState(false);
   const [isGlitched, setIsGlitched] = useState(false);
   const [isRainbowChaos, setIsRainbowChaos] = useState(false);
@@ -888,23 +877,21 @@ const App = () => {
   const [showBoss, setShowBoss] = useState(false);
   const [showBadgeRain, setShowBadgeRain] = useState(false);
   const [showExpRain, setShowExpRain] = useState(false);
-  useEffect(() => {
-    const handleOpenAdmin = () => setIsAdminPanelOpen(true);
-    window.addEventListener('open-admin-panel', handleOpenAdmin);
-    return () => window.removeEventListener('open-admin-panel', handleOpenAdmin);
-  }, []);
+
 
   const [notifications, setNotifications] = useState([]);
   const [quests, setQuests] = useState([]);
   const [boosts, setBoosts] = useState([]);
   const [leaderboardData, setLeaderboardData] = useState([]);
+  const [viewingProfileUser, setViewingProfileUser] = useState(null);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [adminAnnouncement, setAdminAnnouncement] = useState(null);
   const [systemStats, setSystemStats] = useState({ activeUsers: 1, totalPlayers: 1 });
 
   const isModalOpen = !!(
     activeGame || 
     isProfileModalOpen || 
     selectedPlayer || 
-    showInitialModal ||
     isMaintenanceMode
   );
 
@@ -966,6 +953,35 @@ const App = () => {
 
 
 
+  const [broadcastAnnouncement, setBroadcastAnnouncement] = useState(null);
+  const broadcastShownIds = useRef(new Set());
+  const [reportModalData, setReportModalData] = useState({
+    isOpen: false,
+    type: 'game_broken',
+    target: null
+  });
+
+  const handleOpenReportModal = (type, target) => {
+    setReportModalData({
+      isOpen: true,
+      type,
+      target
+    });
+  };
+
+  const handleCloseReportModal = () => {
+    setReportModalData(prev => ({ ...prev, isOpen: false }));
+  };
+
+  useEffect(() => {
+    const handleReportEvent = (e) => {
+      const { type, target } = e.detail || {};
+      handleOpenReportModal(type || 'game_broken', target || null);
+    };
+    window.addEventListener('open-report-modal', handleReportEvent);
+    return () => window.removeEventListener('open-report-modal', handleReportEvent);
+  }, []);
+
   // Global Announcements Listener
   useEffect(() => {
     if (!firebaseUser || window.isFirestoreQuotaExceeded) return;
@@ -976,17 +992,29 @@ const App = () => {
       const data = docSnap.data();
       const announcementId = docSnap.id;
       
-      // If user had closed this specific announcement already, do not show it again
-      if (localStorage.getItem('classroom9x_dismissed_announcement_id') === announcementId) {
-        return;
-      }
-
       let announcementTime = Date.now();
       if (data.timestamp) {
         announcementTime = data.timestamp.toMillis ? data.timestamp.toMillis() : Date.now();
       }
 
-      // Keep announcements visible for up to 2 hours after publication (to keep fresh and avoid stale ones)
+      // Check for 10-second global screen overlay broadcast
+      if (data && (data.showOverlay === true || data.isGlobalBroadcast === true || data.broadcast === true)) {
+        if (!broadcastShownIds.current.has(announcementId)) {
+          const ageMs = Date.now() - announcementTime;
+          // Show overlay if broadcast was published within the past 15 minutes
+          if (ageMs < 15 * 60 * 1000) {
+            broadcastShownIds.current.add(announcementId);
+            setBroadcastAnnouncement({ id: announcementId, ...data });
+          }
+        }
+      }
+
+      // If user had closed this specific announcement banner already, do not show top banner again
+      if (safeLocalStorageGet('classroom9x_dismissed_announcement_id') === announcementId) {
+        return;
+      }
+
+      // Keep top banner visible for up to 2 hours after publication
       const ageMs = Date.now() - announcementTime;
       if (ageMs > 2 * 60 * 60 * 1000) return; // 2 hours limit
 
@@ -1027,7 +1055,7 @@ const App = () => {
   // Handle manual dismissal of global announcements
   const handleCloseAnnouncement = () => {
     if (adminAnnouncement?.id) {
-      localStorage.setItem('classroom9x_dismissed_announcement_id', adminAnnouncement.id);
+      safeLocalStorageSet('classroom9x_dismissed_announcement_id', adminAnnouncement.id);
     }
     setAdminAnnouncement(null);
   };
@@ -1056,11 +1084,12 @@ const App = () => {
     return () => clearInterval(interval);
   }, [firebaseUser, user?.hasSetProfile]);
 
-  // Listen to total user list in real-time to compute global active stats and total players
+  // Listen to total user list with limit to compute global active stats without reading entire DB
   useEffect(() => {
     if (!firebaseUser || window.isFirestoreQuotaExceeded) return;
     
-    const q = query(collection(db, 'users'));
+    // Query registered users to accurately count total community players
+    const q = query(collection(db, 'users'), limit(300));
     const unsub = onSnapshot(q, (snapshot) => {
       const users = snapshot.docs.map(d => {
         const data = d.data();
@@ -1074,9 +1103,18 @@ const App = () => {
       const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
       const activeCount = users.filter(u => u.lastSeenMs > fiveMinsAgo).length;
       
+      // Guest accounts do not count toward total community player count
+      const registeredUsers = users.filter(u => 
+        !u.isAnonymous && 
+        u.email && 
+        !u.isDeleted && 
+        u.username && 
+        !u.username.toLowerCase().startsWith('guest')
+      );
+      
       setSystemStats({
         activeUsers: Math.max(activeCount, 1),
-        totalPlayers: users.length || 1
+        totalPlayers: Math.max(registeredUsers.length, (!firebaseUser?.isAnonymous && firebaseUser?.email ? 1 : 0))
       });
     }, (error) => {
       console.warn('System stats collection sync error:', error);
@@ -1094,31 +1132,35 @@ const App = () => {
   const lastLagNotification = useRef(0);
   const adminAnnouncementTimer = useRef(null);
 
-  const [leaderboardResyncTrigger, setLeaderboardResyncTrigger] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setLeaderboardResyncTrigger(prev => prev + 1);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Leaderboard Real-time Sync (Filtered only on username to be fully global/inclusive)
+  // Leaderboard Real-time Sync (Filtered only on registered users for both Levels & Games Played)
   useEffect(() => {
     if (!firebaseUser || window.isFirestoreQuotaExceeded) {
       if (!firebaseUser) setLeaderboardData([]);
       return;
     }
-    const q = query(collection(db, 'users'), orderBy('score', 'desc'), limit(50));
+    const q = query(collection(db, 'users'), limit(200));
     const unsub = onSnapshot(q, (snapshot) => {
+      const isOwnerPlayer = (player) => {
+        return isPlatformOwner(player);
+      };
+
       const data = snapshot.docs
         .map(d => ({ ...d.data(), uid: d.id }))
-        .filter(player => player.username && player.username !== 'Player' && player.hasSetProfile === true && !player.isAnonymous && !player.username.toLowerCase().startsWith('guest'));
+        .filter(player => {
+          const isValid = player.username && player.username !== 'Player' && player.hasSetProfile === true && !player.isAnonymous && !player.username.toLowerCase().startsWith('guest') && !player.isDeleted;
+          if (!isValid) return false;
+          // When NOT toggled, owner's account does not show on leaderboard, so whoever is below ranks up
+          if (!countOwnerOnLeaderboard && isOwnerPlayer(player)) {
+            return false;
+          }
+          return true;
+        });
       setLeaderboardData(data);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'users');
     });
     return () => unsub();
-  }, [firebaseUser, leaderboardResyncTrigger]);
+  }, [firebaseUser, countOwnerOnLeaderboard]);
 
   // Global Chat Real-time Sync
   useEffect(() => {
@@ -1126,9 +1168,21 @@ const App = () => {
       if (!firebaseUser) setChatMessages([]);
       return;
     }
-    const q = query(collection(db, 'chat'), orderBy('timestamp', 'desc'), limit(50));
+    const q = query(collection(db, 'chat'), orderBy('timestamp', 'desc'), limit(100));
     const unsub = onSnapshot(q, (snapshot) => {
-      const messages = snapshot.docs.map(d => ({ ...d.data(), id: d.id })).reverse();
+      const messages = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          ...data,
+          id: d.id,
+          username: data.username || data.senderName || 'Anonymous',
+          senderName: data.senderName || data.username || 'Anonymous',
+          customAvatar: data.customAvatar || null,
+          recipientUid: data.recipientUid || null,
+          recipientUsername: data.recipientUsername || null,
+          timestamp: data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : data.timestamp || new Date().toISOString()
+        };
+      }).reverse();
       setChatMessages(messages);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'chat');
@@ -1140,35 +1194,43 @@ const App = () => {
     // WebSocket removed in favor of Firestore real-time listeners
   }, []);
 
-  const sendChatMessage = async (text) => {
-    if (!text.trim() || !firebaseUser) return;
+  const sendChatMessage = async (text, recipient = null) => {
+    if (!text || !text.trim()) return;
+    if (!firebaseUser) {
+      handleLogin();
+      return;
+    }
 
     const now = Date.now();
-    if (now - lastChatTime.current < 2000) {
-      setNotifications(prev => [...prev, {
-        id: Date.now(),
-        title: 'RATE LIMIT',
-        message: 'Wait 2 seconds between messages.',
-        type: 'warning',
-        icon: 'Zap',
-        color: 'text-amber-500'
-      }]);
+    if (now - lastChatTime.current < 1500) {
+      addNotification('RATE LIMIT', 'Wait a moment between messages.', 'warning');
       return;
     }
     lastChatTime.current = now;
 
     try {
-      const filteredText = filterProfanity(text);
-      await addDoc(collection(db, 'chat'), {
+      const filteredText = filterProfanity(text.trim());
+      const senderDisplayName = user?.username || (firebaseUser.isAnonymous ? `Guest_${firebaseUser.uid.substring(0, 5)}` : 'Player');
+      const payload = {
         text: filteredText,
         senderUid: firebaseUser.uid,
-        username: user.username,
+        senderName: senderDisplayName,
+        username: senderDisplayName,
+        customAvatar: user?.customAvatar || null,
         timestamp: serverTimestamp(),
-        character: user.currentCharacter,
-        frame: user.currentFrame,
-        isAdmin: user.isAdmin
-      });
+        character: user?.currentCharacter || 'agent-x',
+        frame: user?.currentFrame || 'obsidian',
+        isAdmin: Boolean(user?.isAdmin || user?.role === 'OWNER')
+      };
+
+      if (recipient) {
+        if (recipient.uid) payload.recipientUid = recipient.uid;
+        if (recipient.username) payload.recipientUsername = recipient.username;
+      }
+
+      await addDoc(collection(db, 'chat'), payload);
     } catch (err) {
+      console.error('Chat error:', err);
       handleFirestoreError(err, OperationType.CREATE, 'chat');
     }
   };
@@ -1303,23 +1365,22 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    const savedQuests = localStorage.getItem('classroom9x_quests_v1');
-    const lastQuestDate = localStorage.getItem('classroom9x_quest_date');
+    const savedQuests = safeLocalStorageGetJSON('classroom9x_quests_v1');
+    const lastQuestDate = safeLocalStorageGet('classroom9x_quest_date');
     const today = new Date().toISOString().split('T')[0];
 
-    const parsedQuests = savedQuests ? JSON.parse(savedQuests) : null;
-    if (lastQuestDate === today && Array.isArray(parsedQuests) && parsedQuests.length > 0) {
-      setQuests(parsedQuests);
+    if (lastQuestDate === today && Array.isArray(savedQuests) && savedQuests.length > 0) {
+      setQuests(savedQuests);
     } else {
       const dailyQuests = getRandomQuests(QUEST_POOL, 3);
-      localStorage.setItem('classroom9x_quest_date', today);
-      localStorage.setItem('classroom9x_quests_v1', JSON.stringify(dailyQuests));
+      safeLocalStorageSet('classroom9x_quest_date', today);
+      safeLocalStorageSet('classroom9x_quests_v1', dailyQuests);
       setQuests(dailyQuests);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('classroom9x_quests_v1', JSON.stringify(quests));
+    safeLocalStorageSet('classroom9x_quests_v1', quests);
   }, [quests]);
 
   useEffect(() => {
@@ -1344,11 +1405,15 @@ const App = () => {
       })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return res.json();
+        }
+        return { success: true, fallback: true };
       })
       .catch(err => {
-        // Silently skip if it's just a network failure on initial load/sleep
-        if (err.name !== 'TypeError') {
+        // Silently skip if it's a network failure, abort, or parsing syntax error
+        if (err.name !== 'TypeError' && err.name !== 'SyntaxError') {
           console.error('Leaderboard sync error:', err.message);
         }
       });
@@ -1444,35 +1509,62 @@ const App = () => {
     const unsub = onSnapshot(userRef, async (snapshot) => {
       // 1. Fetch admin status (always check this regardless of profile existence)
       const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.uid));
-      const currentUserEmail = (firebaseUser.email || '').toLowerCase();
-      const isSuperAdmin = currentUserEmail === 'softball_chik_007@yahoo.com';
-      const isAdminFlag = adminDoc.exists() || isSuperAdmin;
-      const role = adminDoc.exists() ? adminDoc.data().role : (isSuperAdmin ? 'OWNER' : null);
+      const isOwnerByAuth = isPlatformOwner(null, firebaseUser);
 
       if (snapshot.exists()) {
         const userData = snapshot.data();
+        const isOwnerAccount = isOwnerByAuth || isPlatformOwner(userData, firebaseUser) || adminDoc.data()?.role === 'OWNER';
         
-        // Final verification for admin status (Collection check OR Super Admin OR redeemed codes)
-        const redeemedCodes = userData.redeemedCodes || [];
-        const hasLegacyAdminCode = redeemedCodes.some(c => c.toUpperCase() === 'ADMIN6');
-        const hasLegacyOwnerCode = redeemedCodes.some(c => c.toUpperCase() === 'OWNER3413');
+        // Check if account has been deleted / terminated by the owner
+        if (userData.isDeleted) {
+          console.warn('Account terminated by owner:', firebaseUser.uid);
+          await auth.signOut();
+          setUser(DEFAULT_USER);
+          addNotification(
+            'ACCOUNT TERMINATED',
+            "This account was deleted by the owner and no longer exists.",
+            'error'
+          );
+          return;
+        }
         
-        const finalIsAdmin = isAdminFlag || hasLegacyAdminCode || hasLegacyOwnerCode;
-        const finalRole = role || (hasLegacyOwnerCode ? 'OWNER' : (hasLegacyAdminCode ? 'MODERATOR' : null));
+        // Strict verification for admin/owner status: softball_chik_007@yahoo.com or Graycen is OWNER
+        const finalRole = isOwnerAccount ? 'OWNER' : (adminDoc.exists() ? adminDoc.data().role : null);
+        const finalIsAdmin = isOwnerAccount || Boolean(adminDoc.exists());
 
-        console.log('Admin Check (Existing User):', { 
-          uid: firebaseUser.uid, 
-          email: firebaseUser.email, 
-          finalIsAdmin,
-          finalRole
-        });
+        // AUTO-RESTORE SITE-OWNER BADGE FOR TRUE PLATFORM OWNER & STRIP FROM NON-OWNERS
+        if (isOwnerAccount) {
+          const curBadges = userData.unlockedBadges || [];
+          const curDisplay = userData.displayedBadgeIds || [];
+          if (!curBadges.includes('site-owner') || !curDisplay.includes('site-owner') || userData.role !== 'OWNER' || userData.currentFrame !== 'owner') {
+            const updatedBadges = Array.from(new Set(['site-owner', ...curBadges]));
+            const updatedDisplay = Array.from(new Set(['site-owner', ...curDisplay])).slice(0, 4);
+            setDoc(userRef, {
+              role: 'OWNER',
+              currentFrame: 'owner',
+              unlockedBadges: updatedBadges,
+              displayedBadgeIds: updatedDisplay
+            }, { merge: true }).catch(err => console.warn('Could not auto-restore owner badges:', err));
+          }
+        } else {
+          // Strictly strip site-owner badge and owner role from any non-owner accounts
+          const curBadges = userData.unlockedBadges || [];
+          const curDisplay = userData.displayedBadgeIds || [];
+          if (curBadges.includes('site-owner') || curDisplay.includes('site-owner') || userData.role === 'OWNER') {
+            const strippedBadges = curBadges.filter(id => id !== 'site-owner');
+            const strippedDisplay = curDisplay.filter(id => id !== 'site-owner');
+            setDoc(userRef, {
+              role: userData.role === 'OWNER' ? null : userData.role,
+              unlockedBadges: strippedBadges,
+              displayedBadgeIds: strippedDisplay
+            }, { merge: true }).catch(err => console.warn('Non-owner badge stripped:', err));
+          }
+        }
 
-        if ((isSuperAdmin || hasLegacyAdminCode || hasLegacyOwnerCode) && !adminDoc.exists() && firebaseUser.email) {
-          const enrollRole = (hasLegacyOwnerCode || isSuperAdmin) ? 'OWNER' : 'MODERATOR';
-          console.log('Auto-enrolling admin role:', enrollRole, 'for', firebaseUser.email);
+        if (isOwnerAccount && !adminDoc.exists()) {
           setDoc(doc(db, 'admins', firebaseUser.uid), { 
-            email: firebaseUser.email,
-            role: enrollRole,
+            email: firebaseUser.email || (userData.username ? `${userData.username}@owner.local` : 'graycen@owner.local'),
+            role: 'OWNER',
             addedAt: serverTimestamp()
           }, { merge: true }).catch(err => console.warn('Admin enrollment failed:', err));
         }
@@ -1484,12 +1576,14 @@ const App = () => {
           email: firebaseUser.email,
           isAnonymous: firebaseUser.isAnonymous || false,
           isAdmin: finalIsAdmin,
-          role: finalRole
+          role: finalRole,
+          unlockedBadges: isOwnerAccount 
+            ? Array.from(new Set(['site-owner', ...(userData.unlockedBadges || [])]))
+            : (userData.unlockedBadges || []).filter(id => id !== 'site-owner'),
+          displayedBadgeIds: isOwnerAccount
+            ? Array.from(new Set(['site-owner', ...(userData.displayedBadgeIds || [])])).slice(0, 4)
+            : (userData.displayedBadgeIds || []).filter(id => id !== 'site-owner')
         }));
-        
-        if (!userData.hasSetProfile && !firebaseUser.isAnonymous) {
-          setShowInitialModal(true);
-        }
       } else {
         // Create initial profile
         const isAnon = firebaseUser.isAnonymous || false;
@@ -1521,10 +1615,13 @@ const App = () => {
           email: firebaseUser.email || '',
           isAnonymous: isAnon,
           username: isAnon ? `Guest_${firebaseUser.uid.substring(0, 5)}` : (firebaseUser.displayName || 'Player'),
-          hasSetProfile: isAnon ? true : false,
+          hasSetProfile: true,
           lastLoginDate: new Date().toISOString().split('T')[0],
-          isAdmin: isAdminFlag,
-          role: role
+          isAdmin: isOwnerByAuth || adminDoc.exists(),
+          role: isOwnerByAuth ? 'OWNER' : (adminDoc.exists() ? adminDoc.data().role : null),
+          unlockedBadges: isOwnerByAuth ? ['site-owner'] : [],
+          displayedBadgeIds: isOwnerByAuth ? ['site-owner'] : [],
+          currentFrame: isOwnerByAuth ? 'owner' : 'default'
         };
 
         console.log('Admin Check (New User):', { 
@@ -1536,9 +1633,6 @@ const App = () => {
         try {
           await setDoc(userRef, initialProfile);
           setUser(initialProfile);
-          if (!isAnon) {
-            setShowInitialModal(true);
-          }
         } catch (error) {
           handleFirestoreError(error, OperationType.CREATE, `users/${firebaseUser.uid}`);
         }
@@ -1571,17 +1665,26 @@ const App = () => {
         score: user.score,
         exp: user.exp,
         gamesPlayed: user.gamesPlayed,
-        unlockedBadges: user.unlockedBadges?.length,
+        unlockedBadges: user.unlockedBadges,
         username: user.username,
+        bio: user.bio || '',
+        displayedBadgeIds: user.displayedBadgeIds || [],
         currentCharacter: user.currentCharacter,
+        customAvatar: user.customAvatar || null,
+        currentBanner: user.currentBanner || 'default',
+        unlockedBanners: user.unlockedBanners || ['default'],
         currentFrame: user.currentFrame,
         currentTheme: user.currentTheme,
-        unlockedThemes: user.unlockedThemes?.length,
-        unlockedFrames: user.unlockedFrames?.length,
-        unlockedCharacters: user.unlockedCharacters?.length,
+        customTheme: user.customTheme,
+        unlockedThemes: user.unlockedThemes,
+        unlockedFrames: user.unlockedFrames,
+        unlockedCharacters: user.unlockedCharacters,
         featuredBadgeId: user.featuredBadgeId,
-        pinnedGames: user.pinnedGames?.length,
-        favorites: user.favorites?.length
+        pinnedGames: user.pinnedGames,
+        favorites: user.favorites,
+        settings: user.settings,
+        redeemedCodes: user.redeemedCodes,
+        hasSetProfile: user.hasSetProfile
       };
 
       const hasChanged = !lastSyncedData.current || JSON.stringify(currentData) !== JSON.stringify(lastSyncedData.current);
@@ -1606,25 +1709,37 @@ const App = () => {
         await updateDoc(userRef, {
           uid: user.uid,
           username: user.username,
+          bio: user.bio || '',
+          displayedBadgeIds: isPlatformOwner(user, firebaseUser)
+            ? Array.from(new Set(['site-owner', ...(user.displayedBadgeIds || [])])).slice(0, 4)
+            : (user.displayedBadgeIds || []).filter(id => id !== 'site-owner'),
           level: user.level,
           score: user.score,
           exp: user.exp,
           isAnonymous: user.isAnonymous || false,
           gamesPlayed: user.gamesPlayed,
           currentCharacter: user.currentCharacter,
+          customAvatar: user.customAvatar || null,
+          currentBanner: user.currentBanner || 'default',
+          unlockedBanners: user.unlockedBanners || ['default'],
           currentFrame: user.currentFrame,
           currentTheme: user.currentTheme,
+          customTheme: user.customTheme || null,
           unlockedThemes: user.unlockedThemes,
           unlockedFrames: user.unlockedFrames,
           unlockedCharacters: user.unlockedCharacters,
-          unlockedBadges: user.unlockedBadges,
+          unlockedBadges: isPlatformOwner(user, firebaseUser)
+            ? Array.from(new Set(['site-owner', ...(user.unlockedBadges || [])]))
+            : (user.unlockedBadges || []).filter(id => id !== 'site-owner'),
           redeemedCodes: user.redeemedCodes || [],
           featuredBadgeId: user.featuredBadgeId,
           favorites: user.favorites,
           pinnedGames: user.pinnedGames || [],
           settings: user.settings,
           hasSetProfile: user.hasSetProfile,
-          lastSeen: serverTimestamp()
+          dailyExp: user.dailyExp || {},
+          dailyGames: user.dailyGames || {},
+          lastActiveDate: user.lastActiveDate || new Date().toISOString().split('T')[0]
         });
         
         lastSyncedData.current = currentData;
@@ -1636,12 +1751,12 @@ const App = () => {
       }
     };
 
-    const timeout = setTimeout(syncUser, 60000); // 60s debounce + change detection
+    const timeout = setTimeout(syncUser, 4000); // 4s debounce + change detection
     return () => clearTimeout(timeout);
-  }, [user.score, user.level, user.exp, user.username, user.hasSetProfile, user.currentCharacter, user.featuredBadgeId, user.gamesPlayed, user.currentFrame, user.unlockedBadges, user.currentTheme, user.settings, user.redeemedCodes, user.pinnedGames, user.favorites]);
+  }, [user, firebaseUser]);
 
   useEffect(() => {
-    localStorage.setItem('classroom9x_local_profile_v4', JSON.stringify(user));
+    safeStoreUserProfile(user);
 
     const body = document.getElementById('app-body');
     if (body) {
@@ -1659,7 +1774,7 @@ const App = () => {
         body.style.removeProperty('--bg-dark');
       }
 
-      if (activeGame || isProfileModalOpen || showInitialModal) {
+      if (activeGame || isProfileModalOpen) {
         if (!isCloaked) {
           body.style.overflow = 'hidden';
           body.classList.add('modal-open');
@@ -1782,63 +1897,97 @@ const App = () => {
 
   const addExpAndTrackPlay = (game) => {
     setUser(prev => {
-      if (prev.level >= 100) return prev;
+      const newGamesPlayed = (prev.gamesPlayed || 0) + 1;
+      const currentLvl = Math.min(prev.level || 1, 999);
 
       const multiplier = boosts.reduce((acc, b) => acc + (b.multiplier - 1), 1);
-      const baseExp = 50;
-      const bonusExp = Math.floor(Math.random() * 25);
-      const earnedExp = Math.floor((baseExp + bonusExp) * multiplier);
+      const isDaily = activeDailyGame && game && (game.id === activeDailyGame.id || game.title === activeDailyGame.name);
+      const dailyMultiplier = isDaily ? 2 : 1;
+      const baseExp = 120;
+      const bonusExp = Math.floor(Math.random() * 60);
+      const earnedExp = Math.floor((baseExp + bonusExp) * multiplier * dailyMultiplier);
       
-      let updatedExp = prev.exp + earnedExp;
-      const requiredForNext = prev.level * LEVEL_UP_BASE;
-      const newGamesPlayed = (prev.gamesPlayed || 0) + 1;
+      const oldTotalExp = prev.totalExp || calculateTotalExp(prev);
+      const newTotalExp = oldTotalExp + earnedExp;
 
-      let newLevel = prev.level;
-      let unlockedThemes = [...prev.unlockedThemes];
-      let unlockedFrames = [...(prev.unlockedFrames || ['obsidian'])];
-      let unlockedCharacters = [...(prev.unlockedCharacters || ['agent-x'])];
-
-      const themeUnlocks = {
-        10: 'emerald', 25: 'rose'
+      // Track daily EXP & games
+      const today = new Date().toISOString().split('T')[0];
+      const prevDailyExp = prev.dailyExp || {};
+      const updatedDailyExp = {
+        ...prevDailyExp,
+        [today]: (prevDailyExp[today] || 0) + earnedExp
       };
-      const frameUnlocks = {
-        5: 'neon', 15: 'emerald', 30: 'gold', 60: 'solar', 100: 'interstellar'
-      };
-      const charUnlocks = {
-        15: 'viper', 30: 'ghost', 50: 'phantom', 75: 'titan', 90: 'nova', 100: 'overlord'
+      const prevDailyGames = prev.dailyGames || {};
+      const updatedDailyGames = {
+        ...prevDailyGames,
+        [today]: (prevDailyGames[today] || 0) + 1
       };
 
-      // Handle multiple level ups if enough EXP is earned, but cap at 100
-      while (updatedExp >= newLevel * LEVEL_UP_BASE && newLevel < 100) {
+      if (isDaily) {
+        addNotification(
+          '2X DAILY GAME BOOST!',
+          `+${earnedExp} EXP awarded! (2X Daily Multiplier applied for playing ${game.title})`,
+          'success',
+          <Zap className="text-yellow-400" />
+        );
+      }
+
+      // If already at max level 999, EXP bar cannot progress anymore
+      if (currentLvl >= 999) {
+        return {
+          ...prev,
+          level: 999,
+          exp: 0,
+          totalExp: newTotalExp,
+          score: prev.score + (earnedExp * 5),
+          gamesPlayed: newGamesPlayed,
+          dailyExp: updatedDailyExp,
+          dailyGames: updatedDailyGames,
+          lastActiveDate: today
+        };
+      }
+
+      let updatedExp = (prev.exp || 0) + earnedExp;
+      let newLevel = currentLvl;
+      let unlockedBanners = [...(prev.unlockedBanners || ['default'])];
+
+      const bannerUnlocks = {
+        5: 'neon-city',
+        10: 'matrix-core',
+        20: 'cosmic-nebula',
+        35: 'solar-flare',
+        50: 'abyssal-void',
+        75: 'rainbow-aurora',
+        100: 'golden-glory',
+        999: 'celestial-999'
+      };
+
+      // Handle multiple level ups if enough EXP is earned, capped at 999
+      while (updatedExp >= newLevel * LEVEL_UP_BASE && newLevel < 999) {
         updatedExp -= (newLevel * LEVEL_UP_BASE);
         newLevel += 1;
         
-        if (newLevel === 100) {
-          updatedExp = 0; // Reset EXP at max level
-        }
-        
-        if (themeUnlocks[newLevel] && !unlockedThemes.includes(themeUnlocks[newLevel])) {
-          unlockedThemes.push(themeUnlocks[newLevel]);
+        if (newLevel >= 999) {
+          newLevel = 999;
+          updatedExp = 0; // Cap EXP bar at max level
         }
 
-        if (frameUnlocks[newLevel] && !unlockedFrames.includes(frameUnlocks[newLevel])) {
-          unlockedFrames.push(frameUnlocks[newLevel]);
-        }
-
-        if (charUnlocks[newLevel] && !unlockedCharacters.includes(charUnlocks[newLevel])) {
-          unlockedCharacters.push(charUnlocks[newLevel]);
+        if (bannerUnlocks[newLevel] && !unlockedBanners.includes(bannerUnlocks[newLevel])) {
+          unlockedBanners.push(bannerUnlocks[newLevel]);
         }
       }
 
       return { 
         ...prev, 
         exp: newLevel >= 999 ? 0 : updatedExp, 
+        totalExp: newTotalExp,
         level: newLevel, 
         score: prev.score + (earnedExp * 5),
-        unlockedThemes,
-        unlockedFrames,
-        unlockedCharacters,
-        gamesPlayed: newGamesPlayed 
+        unlockedBanners,
+        gamesPlayed: newGamesPlayed,
+        dailyExp: updatedDailyExp,
+        dailyGames: updatedDailyGames,
+        lastActiveDate: today
       };
     });
   };
@@ -2022,7 +2171,7 @@ const App = () => {
 
     if (cleanCode === 'OWNER3413') {
       const role = 'OWNER';
-      const allThemes = ['cyan', 'emerald', 'violet', 'cobalt', 'gold', 'fire', 'galaxy', 'hologram', 'rainbow', 'ironman', 'spongebob', 'owner', 'synthwave', 'retrofuture', 'kanye', 'tester', 'usa', 'interstellar', 'glitch'];
+      const allThemes = ['cyan', 'emerald', 'violet', 'cobalt', 'gold', 'fire', 'galaxy', 'hologram', 'rainbow', 'ironman', 'spongebob', 'owner', 'synthwave', 'kanye', 'tester', 'usa', 'glitch', 'doge', 'void'];
       const allFrames = ['moderator', 'obsidian', 'default', 'neon', 'solar', 'interstellar', 'glitch', 'hologram', 'deep-sea', 'owner', 'diamond', 'cyberpunk', 'matrix', 'tester', 'usa'];
       const allChars = CHARACTERS.map(c => c.id);
       const allBadges = Array.from(new Set([...BADGES.map(b => b.id), 'stargazer']));
@@ -2292,42 +2441,6 @@ const App = () => {
     addNotification('System Reset', 'All progress has been erased.', 'error', <Trash2 className="text-rose-500" />);
   };
 
-  const handleInitialNameSubmit = async (name) => {
-    const FORBIDDEN_WORDS = [
-      'fuck', 'shit', 'ass', 'bitch', 'cunt', 'dick', 'pussy', 'nigger', 'faggot', 'bastard',
-      'slut', 'whore', 'cock', 'cum', 'penis', 'vagina', 'porn', 'sex', 'hitler', 'nazi'
-    ];
-    const cleanName = name.trim().toLowerCase();
-    if (FORBIDDEN_WORDS.some(word => cleanName.includes(word))) {
-      setInitialModalError('INAPPROPRIATE USERNAME DETECTED');
-      return;
-    }
-    
-    setInitialModalError(null);
-    let updatedUser;
-    setUser(prev => {
-      updatedUser = { ...prev, username: name, hasSetProfile: true };
-      localStorage.setItem('classroom9x_local_profile_v4', JSON.stringify(updatedUser));
-      return updatedUser;
-    });
-    setShowInitialModal(false);
-
-    // Persist immediately on Firestore to avoid race conditions with real-time onSnapshot listener
-    if (firebaseUser) {
-      try {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        await setDoc(userRef, {
-          username: name,
-          hasSetProfile: true
-        }, { merge: true });
-        console.log('Successfully saved user profile username to Firestore immediately');
-      } catch (err) {
-        console.error('Failed to save username immediately to Firestore:', err);
-        setInitialModalError('DATABASE ERROR. PLEASE TRY AGAIN.');
-        setShowInitialModal(true);
-      }
-    }
-  };
 
   const filteredGames = useMemo(() => {
     if (!searchQuery) {
@@ -2403,37 +2516,106 @@ const App = () => {
   };
 
   const renderContent = () => {
-    if (searchQuery) return <Library games={filteredGames} favorites={user.favorites} pinnedGames={user.pinnedGames} onToggleFavorite={togglePin} onTogglePin={togglePin} onPlayGame={handleGameSelect} />;
+    if (searchQuery) return <Library games={filteredGames} favorites={user.favorites} pinnedGames={user.pinnedGames} onToggleFavorite={togglePin} onTogglePin={togglePin} onPlayGame={handleGameSelect} lockedGames={lockedGames} />;
     switch (currentView) {
-      case AppRoute.CATEGORY: return <CategoryPage categoryId={selectedCategoryId || ''} games={GAMES_DATA} favorites={user.favorites} pinnedGames={user.pinnedGames} onToggleFavorite={togglePin} onTogglePin={togglePin} onPlayGame={handleGameSelect} />;
-      case AppRoute.LIBRARY: return <Library games={GAMES_DATA} favorites={user.favorites} pinnedGames={user.pinnedGames} onToggleFavorite={togglePin} onTogglePin={togglePin} onPlayGame={handleGameSelect} />;
+      case AppRoute.CATEGORY: return <CategoryPage categoryId={selectedCategoryId || ''} games={GAMES_DATA} favorites={user.favorites} pinnedGames={user.pinnedGames} onToggleFavorite={togglePin} onTogglePin={togglePin} onPlayGame={handleGameSelect} lockedGames={lockedGames} />;
+      case AppRoute.LIBRARY: return <Library games={GAMES_DATA} favorites={user.favorites} pinnedGames={user.pinnedGames} onToggleFavorite={togglePin} onTogglePin={togglePin} onPlayGame={handleGameSelect} lockedGames={lockedGames} />;
       case AppRoute.APPS: 
-        if (!user.isAdmin) return <LockedPage title="Apps" onReturn={() => setCurrentView(AppRoute.HOME)} />;
         return (
           <AppsPage 
+            onNavigate={(route) => setCurrentView(route)}
+          />
+        );
+      case AppRoute.SPOTIFY:
+        return (
+          <SpotifyPage 
+            onNavigate={(route) => setCurrentView(route)}
+          />
+        );
+      case AppRoute.CHAT:
+        return (
+          <GlobalChatPage 
+            messages={chatMessages}
+            onSendMessage={sendChatMessage}
+            onDeleteMessage={deleteChatMessage}
+            user={user}
+            onlineCount={systemStats.activeUsers}
+            onNavigate={handleViewChange}
+            onPlayerClick={handleViewProfile}
+            onReportAccount={(target) => handleOpenReportModal('account_reported', target)}
+            leaderboardData={leaderboardData}
+            initialDirectUser={directChatUser}
+          />
+        );
+      case AppRoute.ACCOUNT:
+        return (
+          <AccountPage 
+            user={user}
+            firebaseUser={firebaseUser}
+            viewingUser={viewingProfileUser}
+            onCloseViewingUser={() => setViewingProfileUser(null)}
+            leaderboardData={leaderboardData}
+            onNavigate={handleViewChange}
+            onUpdateUser={setUser}
+            addNotification={addNotification}
+          />
+        );
+      case AppRoute.OWNER: {
+        const isOwnerUser = isPlatformOwner(user, firebaseUser || auth.currentUser);
+        if (!isOwnerUser) {
+          return (
+            <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6">
+              <div className="w-16 h-16 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-500 mb-4 shadow-[0_0_30px_rgba(244,63,94,0.3)]">
+                <ShieldAlert size={32} />
+              </div>
+              <h2 className="text-2xl font-black uppercase italic tracking-tight text-white mb-2">Owner Clearance Required</h2>
+              <p className="text-white/40 text-xs font-bold uppercase tracking-wider max-w-md">This control portal is strictly restricted to the platform owner.</p>
+            </div>
+          );
+        }
+        return (
+          <OwnerPortalPage 
+            user={user}
+            firebaseUser={firebaseUser}
+            onNavigate={(route) => setCurrentView(route)}
+            onTestGame={(game) => handleGameSelect(game)}
+            lockedGames={lockedGames}
+            countOwnerOnLeaderboard={countOwnerOnLeaderboard}
+            onToggleCountOwner={handleToggleCountOwner}
+            onUpdateUser={setUser}
+            addNotification={addNotification}
+            dailyGame={activeDailyGame}
+            gamesData={GAMES_DATA}
+          />
+        );
+      }
+      case AppRoute.CINEMA:
+        return (
+          <CineCinemaPage 
+            onNavigate={(route) => setCurrentView(route)}
+          />
+        );
+      case AppRoute.STEAM:
+      case AppRoute.STREAM:
+        return (
+          <CineStreamPage 
+            onNavigate={(route) => setCurrentView(route)}
+            user={user}
+          />
+        );
+      case AppRoute.CODES:
+        return (
+          <CodesPage 
             user={user} 
-            messages={chatMessages} 
-            sendMessage={sendChatMessage} 
-            deleteMessage={deleteChatMessage} 
-            isFire={isChatOnFire} 
-            onFlameClick={handleFlameClick} 
-            onToggleChat={() => setIsChatOpen(prev => !prev)}
+            onRedeemCode={redeemCode} 
+            addNotification={addNotification} 
           />
         );
       case AppRoute.PROXY: return <ProxyPage />;
-      case AppRoute.CUSTOMIZATION: 
-        if (!user.isAdmin && user?.settings?.hideUnreleased) return <LockedPage title="Customization" onReturn={() => setCurrentView(AppRoute.HOME)} />;
-        return (
-          <Customization 
-            user={user}
-            onUpdateUser={setUser}
-            onUpdateUsername={handleUpdateUsername}
-          />
-        );
+      case AppRoute.CUSTOMIZATION:
       case AppRoute.SETTINGS: return <Settings user={user} onUpdateSettings={updateSettings} onSetTheme={setTheme} onRedeemCode={redeemCode} onResetProgress={handleResetProgress} onUpdateUsername={handleUpdateUsername} addNotification={addNotification} />;
-      case AppRoute.SUMMER: return <SummerCountdown user={user} />;
       case AppRoute.LEADERBOARD: 
-        return <Leaderboard user={user} onPlayerClick={setSelectedPlayer} leaderboardData={leaderboardData} />;
+        return <Leaderboard user={user} onPlayerClick={handleViewProfile} leaderboardData={leaderboardData} />;
       default: return (
         <Home 
           user={user} 
@@ -2443,15 +2625,21 @@ const App = () => {
           pinnedGames={user.pinnedGames}
           leaderboardData={leaderboardData}
           boosts={boosts} 
-          gameOfTheWeek={gameOfTheWeek}
+          dailyGame={activeDailyGame}
+          gameOfTheWeek={activeDailyGame}
           onToggleFavorite={togglePin}
           onTogglePin={togglePin}
           onPlayGame={handleGameSelect}
           onSwitchToLibrary={() => setCurrentView(AppRoute.LIBRARY)}
-          onProfileClick={() => setIsProfileModalOpen(true)}
-          onPlayerClick={setSelectedPlayer}
+          onNavigate={handleViewChange}
+          onProfileClick={() => {
+            setViewingProfileUser(null);
+            handleViewChange(AppRoute.ACCOUNT);
+          }}
+          onPlayerClick={handleViewProfile}
           onLeaderboardClick={() => setCurrentView(AppRoute.LEADERBOARD)}
           systemStats={systemStats}
+          lockedGames={lockedGames}
         />
       );
     }
@@ -2469,10 +2657,20 @@ const App = () => {
 
   const handleToggleCloak = () => {
     if (isCloaked) {
+      try {
+        sessionStorage.setItem('cine_uncloaked', 'true');
+      } catch (e) {
+        console.warn(e);
+      }
       setIsExitingCloak(true);
       setIsCloaked(false);
       setCloakSequence('');
     } else {
+      try {
+        sessionStorage.removeItem('cine_uncloaked');
+      } catch (e) {
+        console.warn(e);
+      }
       setIsCloaked(true);
     }
   };
@@ -2509,9 +2707,16 @@ const App = () => {
       <MiniProfile 
         player={selectedPlayer} 
         onClose={() => setSelectedPlayer(null)} 
+        currentUser={user}
+        onViewProfile={handleViewProfile}
+        onReportAccount={(target) => handleOpenReportModal('account_reported', target)}
+        onMessagePlayer={(player) => {
+          setSelectedPlayer(null);
+          handleViewChange(AppRoute.CHAT, { targetUser: player });
+        }}
       />
     );
-  }, [selectedPlayer]);
+  }, [selectedPlayer, user]);
 
   const renderCurrentView = () => {
     if (isAuthLoading) return <LoadingScreen />;
@@ -2602,7 +2807,6 @@ const App = () => {
                         }
                       })()}
                     </div>
-                    <div className={`absolute -inset-1 frame-${adminAnnouncement.sender.frameId || 'default'} pointer-events-none`} style={{ borderRadius: '1rem' }} />
                   </div>
                   <div className="flex-1">
                      <div className="flex items-center gap-3 mb-1">
@@ -2657,23 +2861,24 @@ const App = () => {
                 </button>
               </div>
             </motion.div>
-          ) : isInitialLoading || isExitingCloak ? (
-            <LoadingScreen key="loading" onComplete={handleLoadingComplete} onCosmicEvent={handleCosmicEvent} />
           ) : isCloaked ? (
             <EducationalCloak key="cloak" onToggleCloak={handleToggleCloak} />
+          ) : isInitialLoading || isExitingCloak ? (
+            <LoadingScreen key="loading" onComplete={handleLoadingComplete} onCosmicEvent={handleCosmicEvent} />
           ) : (
             <motion.div 
               key="main-app"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.98, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 1.02, y: -15 }}
+              transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
               className={`w-full min-h-screen proto-shell theme-${user.currentTheme} ${isModalOpen ? 'modal-active' : ''} ${user.settings.customCursor ? 'custom-cursor-active' : ''}`}
             >
-              <div className={`proto-backdrop transition-opacity duration-1000 ${currentView === AppRoute.SUMMER ? 'opacity-0' : 'opacity-100'}`} />
-        <div className={`proto-grid transition-opacity duration-1000 ${currentView === AppRoute.SUMMER ? 'opacity-0' : 'opacity-100'}`} />
+              <div className="proto-backdrop transition-opacity duration-1000 opacity-100" />
+        <div className="proto-grid transition-opacity duration-1000 opacity-100" />
         
         {/* Pinned Games Global Overlay */}
-        {pinnedGamesList.length > 0 && currentView !== AppRoute.SUMMER && (
+        {pinnedGamesList.length > 0 && (
           <div className="fixed top-10 right-10 z-[100] flex flex-col items-end gap-4 pointer-events-none">
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
@@ -2712,11 +2917,11 @@ const App = () => {
             </AnimatePresence>
           </div>
         )}
-        {<InteractiveBackground user={user} enabled={!user.settings.performanceMode && currentView !== AppRoute.SUMMER} />}
+        {<InteractiveBackground user={user} enabled={!user.settings.performanceMode} />}
         {user.settings.customCursor && <CustomCursor />}
         
           <div className="proto-content-shell">
-          <div className={`min-h-screen transition-colors duration-1000 ${currentView === AppRoute.SUMMER ? 'bg-[#fdf5e6]' : 'bg-background/40'} text-white font-inter selection:bg-theme selection:text-black overflow-x-hidden`}>
+          <div className="min-h-screen transition-colors duration-1000 bg-background/40 text-white font-inter selection:bg-theme selection:text-black overflow-x-hidden">
             {/* Background Effects */}
             {isMatrixRain && !user.settings.performanceMode && <MatrixRain performanceMode={user.settings.performanceMode} />}
             {isRainbowChaos && <div className="rainbow-chaos-overlay" />}
@@ -2729,26 +2934,16 @@ const App = () => {
                 currentView={currentView}
                 selectedCategoryId={selectedCategoryId}
                 onViewChange={handleViewChange}
-                onProfileClick={() => setIsProfileModalOpen(true)}
+                onProfileClick={() => {
+                  setViewingProfileUser(null);
+                  handleViewChange(AppRoute.ACCOUNT);
+                }}
                 onLogin={handleLogin}
                 onLogout={handleLogout}
                 firebaseUser={firebaseUser}
                 onlineCount={systemStats.activeUsers}
               >
                 <>
-                  <AnimatePresence>
-                    {isChatOpen && (
-                      <GlobalChat 
-                        messages={chatMessages} 
-                        onSendMessage={(text) => {
-                          const newMsg = { username: user.username, text, timestamp: new Date().toISOString() };
-                          setChatMessages(prev => [...prev, newMsg].slice(-50));
-                        }}
-                        user={user}
-                        onClose={() => setIsChatOpen(false)}
-                      />
-                    )}
-                  </AnimatePresence>
                   {user.isBanned && (
                     <div key="banned-overlay" className="fixed inset-0 z-[9999] bg-black flex items-center justify-center p-8 text-center">
                       <motion.div 
@@ -2771,8 +2966,6 @@ const App = () => {
                   )}
 
                   {renderContent()}
-
-                  <Footer key="footer" />
                 </>
               </Layout>
             </div>
@@ -2830,26 +3023,63 @@ const App = () => {
             ))}
           </AnimatePresence>
         </div>
-
-        <WaveTransition isVisible={showWaveTransition} onComplete={() => setShowWaveTransition(false)} />
-
         {/* Modals outside effect containers */}
-        {activeGame && <GameModal game={activeGame} isFavorite={(user.pinnedGames || []).includes(activeGame.id)} onToggleFavorite={togglePin} onClose={() => setActiveGame(null)} />}
-        {playingGame && <GameView game={playingGame} onClose={() => setPlayingGame(null)} />}
+        {activeGame && (
+          <GameModal 
+            game={activeGame} 
+            isFavorite={(user.pinnedGames || []).includes(activeGame.id)} 
+            onToggleFavorite={togglePin} 
+            onClose={() => setActiveGame(null)} 
+            lockInfo={lockedGames[activeGame.id]}
+            isOwner={isPlatformOwner(user, firebaseUser || auth.currentUser)}
+          />
+        )}
+        {playingGame && (
+          <GameView 
+            game={playingGame} 
+            onClose={() => setPlayingGame(null)} 
+            onReportGame={(game) => handleOpenReportModal('game_broken', game)}
+          />
+        )}
+        
+        {/* Global Announcement 10s Broadcast Overlay */}
+        {broadcastAnnouncement && (
+          <AnnouncementBroadcastModal
+            announcement={broadcastAnnouncement}
+            durationSeconds={10}
+            onClose={() => setBroadcastAnnouncement(null)}
+          />
+        )}
+
+        {/* Global Reporting Modal */}
+        <ReportModal
+          isOpen={reportModalData.isOpen}
+          onClose={handleCloseReportModal}
+          type={reportModalData.type}
+          target={reportModalData.target}
+          currentUser={user}
+          firebaseUser={firebaseUser}
+          onSuccess={() => {
+            addNotification('Report Submitted', 'Your report has been sent to the owner portal for review.', 'success');
+          }}
+        />
         {isProfileModalOpen && (
           <ProfileModal 
             user={user} 
             firebaseUser={firebaseUser}
-            isSuperAdmin={(firebaseUser?.email || '').toLowerCase() === 'softball_chik_007@yahoo.com'}
+            isSuperAdmin={isPlatformOwner(user, firebaseUser || auth.currentUser)}
             onUpdateUser={setUser}
             onClose={() => setIsProfileModalOpen(false)} 
+            onOpenAccount={() => {
+              setIsProfileModalOpen(false);
+              setCurrentView(AppRoute.ACCOUNT);
+            }}
             onLogout={() => {
-              localStorage.removeItem('classroom9x_local_profile_v4');
+              safeLocalStorageRemove('classroom9x_local_profile_v4');
               window.location.reload();
             }}
           />
         )}
-        {isAdminPanelOpen && <AdminPanel user={user} onClose={() => setIsAdminPanelOpen(false)} />}
         
         {showBoss && (
           <BossEvent onDefeat={() => {
@@ -3061,24 +3291,14 @@ const App = () => {
         {selectPlayerModal}
         
         <AnimatePresence>
-          {showInitialModal && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 1.05, filter: 'blur(15px)' }}
-              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-            >
-              <InitialNameModal onSubmit={handleInitialNameSubmit} error={initialModalError} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isAuthPortalOpen && (
+          {isAuthPortalOpen && (!firebaseUser || firebaseUser.isAnonymous) && (
             <AuthPortal 
               isOpen={isAuthPortalOpen} 
-              onClose={() => setIsAuthPortalOpen(false)} 
+              isFirstTime={isFirstTimeVisitor}
+              onClose={() => {
+                setIsAuthPortalOpen(false);
+                setIsFirstTimeVisitor(false);
+              }} 
               addNotification={addNotification} 
             />
           )}

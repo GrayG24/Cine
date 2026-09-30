@@ -1,136 +1,148 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings as SettingsIcon, Shield, Bell, Activity, Layers, Bot, Ghost, BrainCircuit, Rocket, Plus, Award, Flame, User, X, ChevronRight, Zap, Star, Trophy, Monitor, Smartphone, Volume2, Eye, EyeOff, Key, LogOut, RefreshCw, Palette, Cpu, AlertTriangle, ChevronDown, LayoutGrid, MessageSquare, Lightbulb, Cloud } from 'lucide-react';
-import { Suggestions } from './Suggestions';
+import { Settings as SettingsIcon, User, AlertTriangle, RefreshCw, Lightbulb, Send, CheckCircle2, Shield } from 'lucide-react';
+import { db, auth } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { filterProfanity } from '../lib/profanity';
 
 export const Settings = ({ user, onUpdateSettings, onSetTheme, onRedeemCode, onResetProgress, onUpdateUsername, addNotification }) => {
-  const [redeemInput, setRedeemInput] = useState('');
   const [activeTab, setActiveTab] = useState('general');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
-  const [usernameInput, setUsernameInput] = useState(user.username);
+  const [usernameInput, setUsernameInput] = useState(user?.username || '');
+  const [suggestionText, setSuggestionText] = useState('');
+  const [isSubmittingSuggestion, setIsSubmittingSuggestion] = useState(false);
 
+  // Note: Display & Visuals settings have been removed per user request
   const sections = [
     {
       id: 'general',
-      title: 'Settings',
+      title: 'Preferences',
       icon: SettingsIcon,
       settings: [
-        { id: 'sidebarAutoHide', label: 'Sidebar Auto-Hide', description: 'Collapse the side menu automatically.', type: 'toggle' },
-        { id: 'hideUnreleased', label: 'Hide Unreleased', description: 'Hide sidebar tabs that are coming soon.', type: 'toggle' },
-        { id: 'notifications', label: 'Show Notifications', description: 'Get alerts for achievements and updates.', type: 'toggle' }
+        { id: 'sidebarAutoHide', label: 'Sidebar Auto-Hide', description: 'Automatically collapse the navigation menu.' },
+        { id: 'notifications', label: 'System Notifications', description: 'Receive toast alerts for level-ups and milestones.' },
+        { id: 'displayProfileBadges', label: 'Display Profile Badges', description: 'Show your earned achievement badges on your public profile.' }
       ]
     },
     {
-      id: 'visuals',
-      title: 'Visuals',
-      icon: Palette,
-      settings: [
-        { id: 'performanceMode', label: 'Potato Mode', description: 'Disable heavy animations and background effects for low-end devices.', type: 'toggle' },
-        { id: 'backgroundEffects', label: 'Ambient Particles', description: 'Subtle floating effects in the background.', type: 'toggle' },
-        { id: 'disableGlow', label: 'Reduce Glow', description: 'Decrease intense neon and blooming effects.', type: 'toggle' },
-        { id: 'showFPS', label: 'Show FPS Tracker', description: 'Toggle the real-time performance counter.', type: 'toggle' },
-        { id: 'highContrast', label: 'High Contrast Mode', description: 'Makes text and UI elements easier to read.', type: 'toggle' },
-        { id: 'reduceMotion', label: 'Reduce Motion', description: 'Scales down animation intensity throughout the app.', type: 'toggle' }
-      ]
+      id: 'suggestions',
+      title: 'Submit Suggestion',
+      icon: Lightbulb,
+      settings: []
     },
     {
       id: 'account',
-      title: 'Change Username',
+      title: 'Profile & Identity',
       icon: User,
       settings: []
     }
   ];
 
+  const handleSuggestionSubmit = async (e) => {
+    e.preventDefault();
+    if (!suggestionText.trim() || isSubmittingSuggestion) return;
+
+    if (!auth.currentUser) {
+      if (addNotification) {
+        addNotification('SIGN-IN REQUIRED', 'Please sign in to transmit a suggestion to the owner.', 'error');
+      }
+      return;
+    }
+
+    setIsSubmittingSuggestion(true);
+    try {
+      const filtered = filterProfanity(suggestionText.trim());
+      await addDoc(collection(db, 'suggestions'), {
+        text: filtered,
+        authorId: auth.currentUser.uid,
+        authorName: user?.username || 'Player',
+        votes: 0,
+        createdAt: serverTimestamp(),
+        status: 'pending'
+      });
+      setSuggestionText('');
+      if (addNotification) {
+        addNotification('SUGGESTION TRANSMITTED', 'Your suggestion was sent directly to the site owner in the Owner Portal!', 'success', <CheckCircle2 size={14} className="text-emerald-400" />);
+      }
+    } catch (err) {
+      console.error('Error submitting suggestion:', err);
+      if (addNotification) {
+        addNotification('TRANSMISSION FAILED', 'Could not send suggestion. Please try again.', 'error');
+      }
+    } finally {
+      setIsSubmittingSuggestion(false);
+    }
+  };
+
   return (
-    <div className="pb-40 animate-in fade-in slide-in-from-bottom-5 duration-1000">
+    <div className="min-h-screen pt-8 pb-32 px-4 sm:px-8 max-w-7xl mx-auto">
+      {/* Confirm Reset Dialog */}
       <AnimatePresence>
         {showResetConfirm && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowResetConfirm(false)}
-              className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
-            />
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-black border border-red-500/20 rounded-[2.5rem] p-10 shadow-[0_0_100px_rgba(239,68,68,0.1)]"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-[#0e121a] border border-rose-500/30 rounded-3xl p-8 shadow-2xl"
             >
-              <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-8">
-                <AlertTriangle size={32} />
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-5">
+                <AlertTriangle size={24} />
               </div>
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic mb-6">RESET PROGRESS?</h3>
-              <div className="space-y-4 text-white/40 text-sm leading-relaxed mb-10 font-medium">
-                <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">Warning: Critical Action</p>
-                <p>Are you absolutely sure you want to reset your progress?</p>
-                <p>This action will permanently erase ALL of your data, including:</p>
-                <ul className="list-disc list-inside space-y-1 text-white/60 text-xs italic">
-                  <li>Levels & Experience (XP)</li>
-                  <li>Unlocked special avatars</li>
-                  <li>Game records & achievements</li>
-                  <li>Custom UI configurations</li>
-                </ul>
-                <p className="text-red-500/60 italic text-[11px]">This action is irreversible and cannot be undone.</p>
-              </div>
-              <div className="flex gap-4">
+              <h3 className="text-xl font-black text-white uppercase italic tracking-tight mb-2">Reset Progress?</h3>
+              <p className="text-white/60 text-xs leading-relaxed mb-6">
+                This will reset your local XP level, game stats, and pinned games. This action cannot be undone.
+              </p>
+              <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setShowResetConfirm(false)}
-                  className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all italic rounded-xl"
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                 >
-                  CANCEL
+                  Cancel
                 </button>
                 <button 
                   onClick={() => {
                     onResetProgress();
                     setShowResetConfirm(false);
                   }}
-                  className="flex-1 py-4 bg-red-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-600 transition-all italic shadow-[0_0_30px_rgba(239,68,68,0.3)] rounded-xl"
+                  className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-rose-500/20 cursor-pointer"
                 >
-                  RESET DATA
+                  Confirm Reset
                 </button>
               </div>
             </motion.div>
           </div>
         )}
 
+        {/* Confirm Username Dialog */}
         {showUsernameConfirm && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowUsernameConfirm(false)}
-              className="absolute inset-0 bg-black/90 backdrop-blur-xl"
-            />
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md bg-black border border-white/10 rounded-[3rem] p-12 shadow-2xl"
+              className="w-full max-w-md bg-[#0e121a] border border-white/10 rounded-3xl p-8 shadow-2xl text-center"
             >
-              <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase mb-4 text-center">Are you sure?</h3>
-              <p className="text-white/40 text-[11px] font-medium leading-relaxed uppercase tracking-widest text-center italic mb-10">
-                Changing your name will update how you look on the leaderboard.
+              <h3 className="text-xl font-black text-white uppercase italic tracking-tight mb-2">Change Display Name</h3>
+              <p className="text-white/50 text-xs mb-6">
+                Your new username will appear across Cine Leaderboards and Global Chat.
               </p>
-              <div className="flex flex-col gap-4">
-                <button 
-                  onClick={() => {
-                    onUpdateUsername(usernameInput);
-                    setShowUsernameConfirm(false);
-                  }}
-                  className="w-full py-5 bg-white text-black font-black text-[10px] uppercase tracking-[0.4em] rounded-2xl italic"
-                >
-                  Confirm Change
-                </button>
+              <div className="flex gap-3">
                 <button 
                   onClick={() => setShowUsernameConfirm(false)}
-                  className="w-full py-5 bg-white/5 text-white/40 font-black text-[10px] uppercase tracking-widest rounded-2xl italic"
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                 >
                   Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    onUpdateUsername(usernameInput.trim());
+                    setShowUsernameConfirm(false);
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
+                >
+                  Confirm Change
                 </button>
               </div>
             </motion.div>
@@ -138,253 +150,151 @@ export const Settings = ({ user, onUpdateSettings, onSetTheme, onRedeemCode, onR
         )}
       </AnimatePresence>
 
-      <section className="pt-24 pb-12 relative z-10">
-        <div className="max-w-[80rem] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="mb-16">
-            <h1 className="text-7xl md:text-8xl font-black text-white uppercase tracking-tighter italic leading-none mb-4">
-              SETTINGS
-            </h1>
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] italic">Customize your experience</p>
-          </div>
+      {/* Header */}
+      <div className="mb-10">
+        <h1 className="text-4xl sm:text-5xl font-black text-white uppercase italic tracking-tight">
+          System Settings
+        </h1>
+        <p className="text-white/40 text-xs sm:text-sm font-medium uppercase tracking-widest mt-1">
+          Customize personal preferences and account configurations.
+        </p>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
-            <div className="md:col-span-4 flex flex-col gap-4">
-              <div className="p-3 bg-white/[0.03] rounded-[2.5rem] border border-white/10 backdrop-blur-3xl">
-                {sections.map(section => (
-                  <button
-                    key={section.id}
-                    onClick={() => setActiveTab(section.id)}
-                    className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all relative overflow-hidden group ${
-                      activeTab === section.id 
-                        ? 'text-black' 
-                        : 'text-white/30 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {activeTab === section.id && (
-                      <motion.div 
-                        layoutId="active-settings-tab"
-                        className="absolute inset-0 bg-white"
-                      />
-                    )}
-                    <section.icon size={18} className="relative z-10" />
-                    <span className="text-[10px] uppercase tracking-[0.2em] relative z-10 italic font-black">{section.title}</span>
-                  </button>
-                ))}
-              </div>
-              
-              <div className="p-3 bg-white/[0.03] rounded-[2.5rem] border border-white/10 backdrop-blur-3xl">
-                <button
-                  onClick={() => setActiveTab('suggestions')}
-                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all relative overflow-hidden group ${
-                    activeTab === 'suggestions' 
-                      ? 'text-black' 
-                      : 'text-white/30 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {activeTab === 'suggestions' && (
-                    <motion.div 
-                      layoutId="active-settings-tab"
-                      className="absolute inset-0 bg-white"
-                    />
-                  )}
-                  <Lightbulb size={18} className="relative z-10" />
-                  <span className="text-[10px] uppercase tracking-[0.2em] relative z-10 italic font-black">SUGGESTIONS</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('upcoming')}
-                    className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all relative overflow-hidden group ${
-                      activeTab === 'upcoming' 
-                        ? 'text-black' 
-                        : 'text-white/30 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {activeTab === 'upcoming' && (
-                      <motion.div 
-                        layoutId="active-settings-tab"
-                        className="absolute inset-0 bg-white"
-                      />
-                    )}
-                    <Rocket size={18} className="relative z-10" />
-                    <span className="text-[10px] uppercase tracking-[0.2em] relative z-10 italic font-black">COMING SOON</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('codes')}
-                    className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all relative overflow-hidden group ${
-                      activeTab === 'codes' 
-                        ? 'text-black' 
-                        : 'text-white/30 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {activeTab === 'codes' && (
-                      <motion.div 
-                        layoutId="active-settings-tab"
-                        className="absolute inset-0 bg-white"
-                      />
-                    )}
-                    <Key size={18} className="relative z-10" />
-                    <span className="text-[10px] uppercase tracking-[0.2em] relative z-10 italic font-black">CODES</span>
-                  </button>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        {/* Navigation Tabs */}
+        <div className="md:col-span-4 flex flex-col gap-2 bg-[#0e121a] border border-white/10 p-3 rounded-3xl">
+          {sections.map(section => (
+            <button
+              key={section.id}
+              onClick={() => setActiveTab(section.id)}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all font-bold text-xs uppercase tracking-wider text-left cursor-pointer ${
+                activeTab === section.id
+                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <section.icon size={18} />
+              <span>{section.title}</span>
+            </button>
+          ))}
 
-              <button 
-                onClick={() => setShowResetConfirm(true)}
-                className="w-full p-6 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-500/40 hover:bg-red-500 hover:text-white transition-all text-[9px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 italic"
-              >
-                <RefreshCw size={14} />
-                RESET ALL PROGRESS
-              </button>
-            </div>
-
-            <div className="md:col-span-8">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  {activeTab === 'suggestions' ? (
-                    <Suggestions user={user} addNotification={addNotification} />
-                  ) : activeTab === 'upcoming' ? (
-                    <div className="p-12 rounded-[3.5rem] bg-black/40 border border-white/10 shadow-2xl space-y-12 overflow-hidden relative group">
-                      <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Rocket size={120} />
-                      </div>
-                      
-                      <div className="relative z-10">
-                        <h3 className="text-4xl font-black text-white italic tracking-tighter uppercase mb-4">COMING SOON</h3>
-                        <p className="text-[10px] font-black text-white/30 tracking-[0.5em] uppercase italic">Upcoming features</p>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-6 relative z-10">
-                        {[
-                          { title: 'APPS', icon: LayoutGrid },
-                          { title: 'CUSTOMIZATION', icon: Palette },
-                          { title: 'GLOBAL CHAT', icon: MessageSquare },
-                          { title: 'CLOUD GAMING', icon: Cloud }
-                        ].map((item, i) => (
-                          <div key={i} className="p-8 rounded-[2rem] bg-white/[0.03] border border-white/5 flex items-center gap-8 group/item hover:bg-white/5 transition-all">
-                            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover/item:text-theme transition-colors">
-                              <item.icon size={32} />
-                            </div>
-                            <div>
-                               <div className="flex items-center gap-4">
-                                 <h4 className="text-xl font-black text-white italic tracking-tighter uppercase">{item.title}</h4>
-                                 <span className="px-3 py-1 bg-white/10 rounded-full text-[8px] font-black text-white/40 tracking-widest uppercase">COMING SOON</span>
-                               </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="p-8 rounded-[2rem] bg-theme/5 border border-theme/10 text-center">
-                        <p className="text-[10px] font-black text-theme uppercase tracking-[0.3em] italic animate-pulse">WORK IN PROGRESS</p>
-                      </div>
-                    </div>
-                  ) : activeTab === 'codes' ? (
-                    <div className="p-10 rounded-[3rem] bg-black/40 border border-white/10 shadow-2xl space-y-8">
-                      <div className="flex flex-col gap-2">
-                        <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">REDEEM CODES</h3>
-                        <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] italic leading-none">Enter a code to get items</p>
-                      </div>
-                      
-                      <div className="relative group">
-                        <input
-                          type="text"
-                          value={redeemInput}
-                          onChange={(e) => setRedeemInput(e.target.value)}
-                          placeholder="ENTER CODE..."
-                          className="w-full h-16 px-8 bg-white/[0.02] border border-white/10 rounded-2xl text-white font-black uppercase tracking-widest placeholder:text-white/10 focus:border-white/30 outline-none transition-all italic"
-                        />
-                        <button 
-                          onClick={() => {
-                            const result = onRedeemCode(redeemInput);
-                            if (result.success) setRedeemInput('');
-                          }}
-                          className="absolute right-2 top-2 bottom-2 px-8 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-white/90 transition-all italic"
-                        >
-                          REDEEM
-                        </button>
-                      </div>
-                      
-                      <div className="p-6 rounded-2xl border border-white/5 bg-white/[0.01]">
-                        <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em] italic mb-3">KNOWN CODES</p>
-                        {(!user.redeemedCodes || user.redeemedCodes.length === 0) ? (
-                          <p className="text-xs font-black text-white/25 uppercase tracking-wider italic">No codes redeemed yet</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            {(user.redeemedCodes || []).map((code) => (
-                              <div 
-                                key={code}
-                                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-black text-[10px] tracking-widest uppercase italic"
-                              >
-                                {code}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : activeTab === 'account' ? (
-                    <div className="p-10 rounded-[3rem] bg-black/40 border border-white/10 shadow-2xl space-y-10">
-                      <div className="flex flex-col gap-2">
-                        <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">CHANGE NAME</h3>
-                        <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] italic leading-none">Update your username</p>
-                      </div>
-                      
-                      <div className="flex flex-col gap-4">
-                        <input 
-                          type="text"
-                          value={usernameInput}
-                          onChange={(e) => setUsernameInput(e.target.value)}
-                          placeholder="ENTER NEW NAME..."
-                          className="w-full h-20 bg-white/[0.02] border border-white/10 rounded-2xl px-10 text-white font-black text-2xl uppercase tracking-tighter outline-none focus:border-white/30 transition-all italic"
-                        />
-                        <button 
-                          onClick={() => setShowUsernameConfirm(true)}
-                          disabled={usernameInput.trim().length < 2}
-                          className="w-full py-6 bg-white text-black font-black text-[11px] uppercase tracking-[0.4em] rounded-2xl hover:scale-[1.01] active:scale-[0.98] transition-all italic shadow-xl disabled:opacity-20 disabled:cursor-not-allowed"
-                        >
-                          UPDATE USERNAME
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {sections.find(s => s.id === activeTab)?.settings.map(setting => (
-                        <div key={setting.id} className="p-8 rounded-[2.5rem] bg-black/40 border border-white/10 hover:border-white/20 transition-all flex items-center justify-between group">
-                          <div>
-                            <h4 className="text-xl font-black text-white uppercase italic tracking-tighter mb-1">{setting.label}</h4>
-                            <p className="text-[10px] font-black text-white/20 uppercase italic tracking-widest leading-relaxed">{setting.description}</p>
-                          </div>
-                          
-                          <button
-                            onClick={() => {
-                              const newValue = !user.settings[setting.id];
-                              onUpdateSettings({ ...user.settings, [setting.id]: newValue });
-                            }}
-                            className={`w-14 h-8 rounded-full p-1 transition-all relative ${
-                              user.settings[setting.id] ? 'bg-white shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-white/10'
-                            }`}
-                          >
-                            <motion.div
-                              animate={{ x: user.settings[setting.id] ? 24 : 0 }}
-                              className={`w-6 h-6 rounded-full ${
-                                user.settings[setting.id] ? 'bg-black' : 'bg-white/20'
-                              }`}
-                            />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
+          <div className="pt-2 mt-2 border-t border-white/5">
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <RefreshCw size={14} />
+              <span>Reset Data</span>
+            </button>
           </div>
         </div>
-      </section>
+
+        {/* Tab Content Panel */}
+        <div className="md:col-span-8 bg-[#0e121a] border border-white/10 rounded-3xl p-6 sm:p-8">
+          {/* TAB 1: SUGGESTION SUBMISSION (Only owner sees community suggestions in Owner Portal) */}
+          {activeTab === 'suggestions' ? (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tight mb-1 flex items-center gap-2">
+                  <Lightbulb size={20} className="text-yellow-400" />
+                  <span>Submit Suggestion to Owner</span>
+                </h3>
+                <p className="text-xs text-white/50">
+                  Suggest a new game, app, or feature. Submissions are delivered directly to the platform owner in the Owner Portal.
+                </p>
+              </div>
+
+              <form onSubmit={handleSuggestionSubmit} className="space-y-4">
+                <textarea
+                  value={suggestionText}
+                  onChange={(e) => setSuggestionText(e.target.value)}
+                  placeholder="Describe your game or feature suggestion here..."
+                  maxLength={500}
+                  rows={5}
+                  required
+                  className="w-full bg-[#121624] border border-white/10 rounded-2xl p-4 text-white text-xs font-medium focus:outline-none focus:border-blue-500 resize-none transition-colors"
+                />
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-white/40">{suggestionText.length}/500</span>
+                  <button
+                    type="submit"
+                    disabled={!suggestionText.trim() || isSubmittingSuggestion}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Send size={14} />
+                    <span>{isSubmittingSuggestion ? 'Transmitting...' : 'Send to Owner'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : activeTab === 'account' ? (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-white uppercase italic tracking-tight mb-1">Display Profile</h3>
+                <p className="text-xs text-white/50">Update how your name appears across Cine leaderboards and active games.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-white/40 block">Your Username</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    maxLength={20}
+                    className="flex-1 bg-[#121624] border border-white/10 rounded-xl px-4 py-3 text-white text-xs font-bold focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    onClick={() => setShowUsernameConfirm(true)}
+                    disabled={!usernameInput.trim() || usernameInput === user?.username}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:opacity-40 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-500/20 cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-white uppercase italic tracking-tight mb-1">Preferences</h3>
+                <p className="text-xs text-white/50">Configure your system alerts and profile settings.</p>
+              </div>
+
+              <div className="divide-y divide-white/5">
+                {sections.find(s => s.id === 'general')?.settings.map(setting => {
+                  const isChecked = user?.settings?.[setting.id] !== false;
+                  return (
+                    <div key={setting.id} className="py-4 flex items-center justify-between gap-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-white">{setting.label}</h4>
+                        <p className="text-xs text-white/50 mt-0.5">{setting.description}</p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          onUpdateSettings({
+                            ...user?.settings,
+                            [setting.id]: !isChecked
+                          });
+                        }}
+                        className={`w-12 h-6 rounded-full transition-all p-1 flex items-center cursor-pointer ${
+                          isChecked 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 justify-end shadow-[0_0_10px_rgba(59,130,246,0.3)]' 
+                            : 'bg-white/10 justify-start'
+                        }`}
+                      >
+                        <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

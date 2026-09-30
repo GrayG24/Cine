@@ -1,184 +1,155 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { LayoutGrid, MessageSquare, Music, Globe, Terminal, Shield, Zap, Cpu, Activity, Plus, Lock, Film, X, Play } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Clapperboard, Radio, Disc3, MessageSquare, ExternalLink } from 'lucide-react';
+import { AppRoute } from '../constants';
+import { safeLocalStorageGetJSON, safeLocalStorageSet } from '../lib/storage';
 
-const KoopinemaButton = ({ onClick }) => (
-  <button 
-    onClick={onClick}
-    className="group flex flex-col items-center gap-1.5 p-2 rounded-xl w-[76px] transition-all duration-150 hover:bg-white/5" 
-    title="Click or double-click to open"
-  >
-    <div className="w-12 h-12 rounded-xl border flex items-center justify-center transition-all duration-150 bg-[#141414] border-white/10 group-hover:border-white/20">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{width: '21px', height: '21px', color: 'rgb(156, 163, 175)'}} aria-hidden="true">
-        <rect x="2" y="3" width="20" height="18" rx="2.5" fill="currentColor" opacity="0.12" stroke="currentColor" strokeWidth="1.5"></rect>
-        <rect x="2" y="6.5" width="2.5" height="2" rx="0.6" fill="currentColor"></rect>
-        <rect x="2" y="11" width="2.5" height="2" rx="0.6" fill="currentColor"></rect>
-        <rect x="2" y="15.5" width="2.5" height="2" rx="0.6" fill="currentColor"></rect>
-        <rect x="19.5" y="6.5" width="2.5" height="2" rx="0.6" fill="currentColor"></rect>
-        <rect x="19.5" y="11" width="2.5" height="2" rx="0.6" fill="currentColor"></rect>
-        <rect x="19.5" y="15.5" width="2.5" height="2" rx="0.6" fill="currentColor"></rect>
-        <rect x="5.5" y="5" width="13" height="14" rx="1.5" stroke="currentColor" strokeWidth="0.75" opacity="0.25"></rect>
-        <path d="M10 9.2 L10 14.8 L15.6 12 Z" fill="currentColor"></path>
-      </svg>
-    </div>
-    <span className="text-[11px] text-center leading-tight select-none px-0.5 text-gray-300" style={{maxWidth: '72px', wordBreak: 'break-word'}}>Koopinema</span>
-  </button>
-);
+export const AppsPage = ({ onNavigate }) => {
+  const [recentApps, setRecentApps] = useState(() => {
+    return safeLocalStorageGetJSON('recent_apps_list', []);
+  });
 
-export const AppsPage = ({ onToggleChat }) => {
   const apps = [
     {
       id: 'chat',
-      name: 'Global Chat',
+      name: 'Messages',
       icon: MessageSquare,
-      description: 'Chat with other players in real-time.',
-      category: 'MESSAGES',
-      status: 'ACTIVE',
-      version: '2.0.1',
-      action: onToggleChat
+      route: AppRoute.CHAT,
+      description: 'message individual players or chat in community channels',
+      category: 'COMMUNITY',
+      badge: 'MESSAGES',
+      accent: '#3b82f6',
+      bgGlow: 'rgba(59,130,246,0.2)',
+      action: () => {
+        onNavigate(AppRoute.CHAT);
+        trackRecentApp('chat');
+      }
     },
     {
       id: 'spotify',
       name: 'Spotify',
-      icon: Music,
-      description: 'This app is currently broken and unavailable.',
+      icon: Disc3,
+      route: AppRoute.SPOTIFY,
+      description: 'built in spotify player',
       category: 'MUSIC',
-      status: 'BROKEN',
-      version: '1.2.4',
-      disabled: true,
-      action: () => window.dispatchEvent(new CustomEvent('toggle-spotify-player', { detail: { fullScreen: true } }))
+      badge: 'AUDIO',
+      accent: '#10b981',
+      bgGlow: 'rgba(16,185,129,0.15)',
+      action: () => {
+        onNavigate(AppRoute.SPOTIFY);
+        trackRecentApp('spotify');
+      }
+    },
+    {
+      id: 'stream',
+      name: 'Streamly',
+      icon: Radio,
+      route: AppRoute.STREAM,
+      description: 'live streaming platform',
+      category: 'STREAMING',
+      badge: 'UPGRADES',
+      accent: '#a855f7',
+      bgGlow: 'rgba(168,85,247,0.15)',
+      action: () => {
+        onNavigate(AppRoute.STREAM);
+        trackRecentApp('stream');
+      }
+    },
+    {
+      id: 'cinema',
+      name: 'Cinema',
+      icon: Clapperboard,
+      route: AppRoute.CINEMA,
+      description: 'movies, TV-shows',
+      category: 'THEATER',
+      badge: 'UPGRADES',
+      accent: '#f59e0b',
+      bgGlow: 'rgba(245,158,11,0.15)',
+      action: () => {
+        onNavigate(AppRoute.CINEMA);
+        trackRecentApp('cinema');
+      }
     },
   ];
 
+  const trackRecentApp = (appId) => {
+    setRecentApps(prev => {
+      const updated = [appId, ...prev.filter(id => id !== appId)].slice(0, 4);
+      safeLocalStorageSet('recent_apps_list', updated);
+      return updated;
+    });
+  };
+
   return (
-    <div className="min-h-screen pt-40 pb-40 relative overflow-hidden">
-      {/* Technical Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[length:40px_40px]"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05)_0%,transparent_70%)]"></div>
+    <div className="min-h-screen pt-8 pb-32 px-4 sm:px-8 max-w-7xl mx-auto">
+      {/* Header Section */}
+      <div className="flex flex-col gap-2 mb-10">
+        <h1 className="text-4xl sm:text-5xl font-black text-white uppercase tracking-tight italic leading-none">
+          Apps
+        </h1>
+        <p className="text-white/40 text-xs sm:text-sm font-medium mt-1">
+          Explore apps, utilities, music, and community hubs.
+        </p>
       </div>
 
-      <div className="max-w-[100rem] mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
-        {/* Header Section */}
-        <div className="flex flex-col gap-6 mb-24">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-4"
+      {/* Grid of Apps */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {apps.map((app) => (
+          <motion.div
+            key={app.id}
+            whileHover={{ y: -6, scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={app.action}
+            className="p-8 rounded-[2.5rem] bg-gradient-to-b from-white/[0.03] to-black/60 border border-white/10 hover:border-white/30 cursor-pointer shadow-xl transition-all group flex flex-col justify-between h-64 relative overflow-hidden"
           >
-            <div className="w-3 h-3 bg-primary animate-pulse"></div>
-            <span className="text-[10px] font-mono font-black uppercase tracking-[0.5em] text-primary">v4.5.0</span>
+            <div 
+              className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700 pointer-events-none"
+              style={{ backgroundColor: app.accent }}
+            />
+
+            <div className="flex items-start justify-between">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-white border"
+                style={{ 
+                  backgroundColor: `${app.accent}20`,
+                  borderColor: `${app.accent}40`,
+                  color: app.accent,
+                  boxShadow: `0 0 25px ${app.accent}30`
+                }}
+              >
+                <app.icon size={26} />
+              </div>
+
+              <span 
+                className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
+                style={{ 
+                  backgroundColor: `${app.accent}15`,
+                  borderColor: `${app.accent}30`,
+                  color: app.accent
+                }}
+              >
+                {app.badge}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-2xl font-black uppercase italic tracking-tight text-white group-hover:text-primary transition-colors">
+                {app.name}
+              </h3>
+              <p className="text-xs text-white/50 leading-relaxed mt-1 line-clamp-2">
+                {app.description}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-white/5 text-[11px] font-black uppercase tracking-wider text-white/70">
+              <span className="text-white/40">{app.category}</span>
+              <div className="flex items-center gap-1.5 text-primary group-hover:translate-x-1 transition-transform">
+                <span>Open App</span>
+                <ExternalLink size={12} />
+              </div>
+            </div>
           </motion.div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-8xl font-black text-white uppercase tracking-tighter italic leading-none"
-          >
-            THE <br />
-            <span className="text-primary">APPS</span>
-          </motion.h1>
-          <p className="text-white/30 font-mono text-xs uppercase tracking-[0.2em] max-w-xl">
-            Choose an app to open.
-          </p>
-        </div>
-
-        {/* App Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-24">
-          {apps.map((app, index) => (
-            <motion.div
-              key={app.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              onClick={() => !app.disabled && app.action && app.action()}
-              className={`group relative bg-white/[0.02] border border-white/10 rounded-3xl p-10 overflow-hidden transition-all duration-500 ${app.disabled ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-pointer hover:bg-white/[0.04] hover:border-primary/40'}`}
-            >
-              {/* Technical Accents */}
-              <div className="absolute top-0 right-0 p-6 flex flex-col items-end gap-2">
-                <div className="text-[8px] font-mono text-white/20 uppercase tracking-widest">{app.category}</div>
-                <div className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full ${app.disabled ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`}></div>
-                  <div className={`text-[8px] font-mono uppercase tracking-widest ${app.disabled ? 'text-rose-500' : 'text-emerald-500'}`}>{app.status}</div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-8">
-                <div className="relative">
-                  <div className={`w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white transition-all duration-500 shadow-2xl ${!app.disabled && 'group-hover:scale-110 group-hover:text-primary'}`}>
-                    <app.icon size={32} />
-                  </div>
-                  {!app.disabled && <div className="absolute -inset-4 bg-primary/10 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>}
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-4">
-                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">{app.name}</h3>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[7px] font-mono text-white/40">v{app.version}</span>
-                  </div>
-                  <p className="text-xs text-white/40 font-medium leading-relaxed mb-8">
-                    {app.description}
-                  </p>
-                  
-                  <div className="flex items-center gap-4">
-                    <button 
-                      disabled={app.disabled}
-                      className={`flex-1 py-4 rounded-xl font-black text-[9px] uppercase tracking-[0.3em] italic transition-all shadow-xl ${app.disabled ? 'bg-white/5 text-white/20 cursor-not-allowed' : 'bg-white text-black hover:bg-primary'}`}
-                    >
-                      {app.disabled ? 'LOCKED' : 'OPEN'}
-                    </button>
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-white/20">
-                      {app.disabled ? <Lock size={16} /> : <Zap size={16} />}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Background Glow */}
-              {!app.disabled && <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-primary/5 blur-[100px] rounded-full group-hover:bg-primary/10 transition-colors"></div>}
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Quick Access Utility Section */}
-        <div className="flex flex-col gap-8 mb-24">
-          <div className="flex items-center gap-4">
-            <span className="text-[10px] font-mono font-black uppercase tracking-[0.5em] text-white/20">RECENT APPS</span>
-            <div className="h-px flex-1 bg-white/5"></div>
-          </div>
-          <div className="flex flex-wrap gap-8 items-start">
-             <div className="w-[76px] h-[76px] rounded-xl border border-dashed border-white/5 flex items-center justify-center text-white/5 italic text-[8px] font-black uppercase tracking-widest text-center">Empty Slot</div>
-          </div>
-        </div>
-
-        {/* System Status Bar */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-32 p-8 bg-white/[0.02] border border-white/5 rounded-[2rem] flex flex-wrap items-center justify-between gap-8 backdrop-blur-3xl"
-        >
-          <div className="flex items-center gap-10">
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-mono text-white/20 uppercase tracking-widest">SERVER LOAD</span>
-              <div className="flex items-center gap-2">
-                <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden">
-                  <motion.div 
-                    animate={{ width: ['20%', '45%', '30%'] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                    className="h-full bg-primary"
-                  ></motion.div>
-                </div>
-                <span className="text-[10px] font-mono text-primary">STABLE</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-3">
-              <Shield size={14} className="text-emerald-500" />
-              <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">SECURE CONNECTION</span>
-            </div>
-          </div>
-        </motion.div>
+        ))}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { User, Zap, Ghost, Cat, Crown, Bot, ZapOff, Award, Star, Heart, Layers, Target, Palette, PanelsTopLeft, Binary, Activity, ShieldCheck, Rocket, Trophy, Hammer, Search } from 'lucide-react';
+import { User, Zap, Ghost, Cat, Crown, Bot, ZapOff, Award, Star, Heart, Layers, Target, Palette, PanelsTopLeft, Binary, Activity, ShieldCheck, Rocket, Trophy, Hammer, Search, Flame, Sparkles, Medal, Gamepad2 } from 'lucide-react';
 
 export const AppRoute = {
   HOME: 'home',
@@ -11,7 +11,43 @@ export const AppRoute = {
   CATEGORY: 'category',
   ADMIN: 'admin',
   CODES: 'codes',
-  SUMMER: 'summer'
+  CHAT: 'chat',
+  SPOTIFY: 'spotify',
+  CINEMA: 'cinema',
+  STEAM: 'stream',
+  STREAM: 'stream',
+  ACCOUNT: 'account',
+  NOTIFICATIONS: 'home',
+  OWNER: 'owner',
+};
+
+export const isPlatformOwner = (userOrAccount, currentAuth = null) => {
+  if (!userOrAccount && !currentAuth) return false;
+  const email = (
+    userOrAccount?.email || 
+    userOrAccount?.senderEmail || 
+    userOrAccount?.userEmail || 
+    currentAuth?.email || 
+    ''
+  ).toLowerCase().trim();
+  
+  const username = (
+    userOrAccount?.username || 
+    userOrAccount?.displayName || 
+    userOrAccount?.senderName || 
+    currentAuth?.displayName || 
+    ''
+  ).toLowerCase().trim();
+  
+  const uid = userOrAccount?.uid || userOrAccount?.senderUid || currentAuth?.uid || '';
+  const role = userOrAccount?.role || '';
+
+  return (
+    email === 'softball_chik_007@yahoo.com' ||
+    username === 'graycen' ||
+    uid === '8WTl89e5SnSCyyoPoHjvFUgg5nv2' ||
+    role === 'OWNER'
+  );
 };
 
 export const RARITY_ORDER = {
@@ -34,40 +70,64 @@ export const CATEGORIES = [
 ];
 
 export const CHARACTERS = [
-  { id: 'agent-x', name: 'Default', level: 1, desc: 'Just your average player. Ready for games.', icon: User },
-  { id: 'viper', name: 'Viper', level: 15, desc: 'Super fast. You won\'t even see them coming.', icon: Zap },
-  { id: 'ghost', name: 'Ghost', level: 30, desc: 'Can sneak into any game quietly.', icon: Ghost },
-  { id: 'phantom', name: 'Phantom', level: 50, desc: 'Is here, then there, then everywhere.', icon: ZapOff },
-  { id: 'titan', name: 'Titan', level: 75, desc: 'Built like a tank. Unstoppable.', icon: ShieldCheck },
-  { id: 'nova', name: 'Nova', level: 90, desc: 'Shines brighter than any other player.', icon: Star },
-  { id: 'overlord', name: 'Overlord', level: 100, desc: 'The boss of the whole site.', icon: Crown },
-  { id: 'spongebob', name: 'SpongeBob SquarePants', isCode: true, desc: 'Who lives in a pineapple under the sea? SPONGEBOB SQUAREPANTS!', img: 'https://i.pinimg.com/236x/2f/04/58/2f04582f337a1909f55340b30412f20d.jpg', icon: Star },
-  { id: 'stark', name: 'Jarvis', isCode: true, desc: 'Advanced AI assistant. Integrated system intelligence.', img: 'https://i.pinimg.com/originals/60/98/2e/60982ea675870ee7b9703e29ab94ce55.jpg', icon: Bot },
-  { id: 'kanye', name: 'Ye', isCode: true, desc: 'I am a genius. I am a god.', img: 'https://images.genius.com/cd83ad3baf919c5d988894bec3d6ea74.1000x1000x1.jpg', icon: Star },
-  { id: 'patriot', name: 'The Patriot', isCode: true, desc: 'Freedom and justice for all.', img: 'https://cdn.openart.ai/uploads/image_qa4FI6Vn_1705156204757_raw.jpg', icon: ShieldCheck },
-  { id: 'glitch', name: 'Glitch', isCode: true, desc: 'An anomaly in the computer grid. Highly unstable and glowing.', img: '/src/assets/images/glitch_avatar_artwork_1779908851777.png', icon: ZapOff },
-  { id: 'doge', name: 'Doge', isCode: true, desc: 'Very cute. Much wow. So doge.', img: 'https://flyclipart.com/thumbs/doge-meme-1690949.png', icon: Star },
-  { id: 'doge-king', name: 'Doge King', isCode: true, desc: 'Exclusive quest reward. Much royalty. Very wow.', img: 'https://wallpapercave.com/wp/wp6956389.jpg', icon: Crown },
-  { id: 'owner', name: 'Elite Owner Logo', isCode: true, desc: 'Official owner avatar profile picture.', img: 'https://styles.redditmedia.com/t5_bp2vj4/styles/profileIcon_c4myk79c495d1.png?width=256&height=256&frame=1&auto=webp&crop=256:256,smart&s=269d44883cc4c673f2b47c1e178b2f8de500e331', icon: Crown },
+  { id: 'agent-x', name: 'Default Player', level: 1, desc: 'Your customizable gamer identity.', icon: User },
+];
+
+export const PROFILE_BANNERS = [
+  { id: 'default', name: 'Cine Glow', level: 1, gradient: 'from-blue-950/80 via-indigo-900/60 to-purple-950/80', desc: 'Deep cosmic blue and radiant royal purple glow.' },
+  { id: 'neon-city', name: 'Amethyst Night', level: 5, gradient: 'from-blue-600/60 via-purple-900/60 to-indigo-950/70', desc: 'Deep violet metropolis night skyline.' },
+  { id: 'matrix-core', name: 'Matrix Terminal', level: 10, gradient: 'from-emerald-950/70 via-emerald-800/40 to-black', desc: 'Digital code falling through dark cyberspace.' },
+  { id: 'cyber-synthwave', name: 'Neon Outrun', level: 15, gradient: 'from-indigo-900/80 via-purple-900/70 to-blue-900/80', desc: 'Retro 80s arcade grid with neon violet accents.' },
+  { id: 'cosmic-nebula', name: 'Cosmic Nebula', level: 25, gradient: 'from-violet-900/70 via-indigo-950/60 to-blue-900/60', desc: 'Deep galactic star cluster.' },
+  { id: 'solar-flare', name: 'Solar Flare', level: 35, gradient: 'from-amber-600/70 via-orange-700/50 to-purple-900/60', desc: 'Blazing coronal eruption of pure energy.' },
+  { id: 'abyssal-void', name: 'Abyssal Void', level: 50, gradient: 'from-slate-950 via-zinc-900/80 to-blue-950/80', desc: 'Endless depth of dark obsidian.' },
+  { id: 'rainbow-aurora', name: 'Prismatic Aurora', level: 75, gradient: 'from-blue-600/60 via-indigo-500/50 to-purple-600/50', desc: 'Celestial prismatic curtains of light.' },
+  { id: 'golden-glory', name: 'Golden Sovereign', level: 100, theme: 'gold', animated: true, accentColor: '#f59e0b', gradient: 'from-amber-600 via-yellow-400 to-amber-700', desc: 'Animated 24K regal gold foil with pulsing sunburst rays and floating golden shimmer.' },
+  { id: 'phantom-supernova', name: 'Phantom Supernova', level: 150, theme: 'supernova', animated: true, accentColor: '#f43f5e', gradient: 'from-rose-600 via-fuchsia-600 to-indigo-950', desc: 'Animated cosmic supernova bursting with hot neon magenta, white plasma, and shockwaves.' },
+  { id: 'hyperdrive-quantum', name: 'Quantum Hyperdrive', level: 200, theme: 'quantum', animated: true, accentColor: '#06b6d4', gradient: 'from-cyan-400 via-teal-500 to-slate-950', desc: 'Animated light-speed warp corridor with high-velocity neon cyan streaks and quantum grid.' },
+  { id: 'void-dragon', name: 'Void Dragon Sovereign', level: 300, theme: 'void-dragon', animated: true, accentColor: '#10b981', gradient: 'from-emerald-950 via-emerald-600 to-black', desc: 'Animated obsidian abyssal beast radiating toxic emerald dragon fire and glowing scales.' },
+  { id: 'astral-demigod', name: 'Astral Demigod Horizon', level: 500, theme: 'demigod', animated: true, accentColor: '#fb7185', gradient: 'from-rose-500 via-orange-400 to-amber-600', desc: 'Animated celestial rose-coral dawn with divine ascending solar rays and sacred halos.' },
+  { id: 'celestial-singularity', name: 'Celestial Singularity', level: 750, theme: 'singularity', animated: true, accentColor: '#f97316', gradient: 'from-orange-600 via-red-950 to-black', desc: 'Animated black hole event horizon encircled by a searing vortex of molten lava-orange plasma.' },
+  { id: 'celestial-999', name: 'The Absolute Pinnacle Apex', level: 999, theme: 'pinnacle-999', animated: true, accentColor: '#38bdf8', gradient: 'from-red-500 via-yellow-400 via-emerald-400 via-cyan-400 via-purple-500 to-pink-500', desc: 'Animated transcendent holographic rainbow chrome with fluid prismatic waves and diamond stars.' },
+];
+
+export const LEVEL_ROAD_TIERS = [
+  { level: 5, name: 'Amethyst Initiate', type: 'BANNER', desc: 'Unlocks the Amethyst Night profile banner.' },
+  { level: 10, name: 'Terminal Hacker', type: 'BANNER', desc: 'Unlocks the Matrix Terminal cyberspace banner.' },
+  { level: 15, name: 'Neon Outrunner', type: 'BANNER', desc: 'Unlocks the Neon Outrun retro banner.' },
+  { level: 25, name: 'Cosmic Explorer', type: 'BANNER', desc: 'Unlocks the Cosmic Nebula interstellar banner.' },
+  { level: 35, name: 'Solar Vanguard', type: 'BANNER', desc: 'Unlocks the Solar Flare energetic banner.' },
+  { level: 50, name: 'Obsidian Veteran', type: 'BANNER', desc: 'Unlocks the Abyssal Void deep obsidian banner.' },
+  { level: 75, name: 'Prismatic Master', type: 'BANNER', desc: 'Unlocks the Prismatic Aurora celestial banner.' },
+  { level: 100, name: 'Level 100 Sovereign', type: 'ANIMATED BANNER', desc: 'Earns the Level 100 badge and animated 24K Golden Sovereign banner.' },
+  { level: 150, name: 'Supernova Phantom', type: 'ANIMATED BANNER', desc: 'Unlocks the explosive neon magenta Phantom Supernova animated banner.' },
+  { level: 200, name: 'Quantum Voyager', type: 'ANIMATED BANNER', desc: 'Unlocks the high-velocity neon cyan Quantum Hyperdrive animated banner.' },
+  { level: 300, name: 'Void Dragon Lord', type: 'ANIMATED BANNER', desc: 'Unlocks the toxic emerald fire Void Dragon Sovereign animated banner.' },
+  { level: 500, name: 'Arcade Demigod', type: 'ANIMATED BANNER', desc: 'Unlocks the celestial rose-coral Astral Demigod Horizon animated banner.' },
+  { level: 750, name: 'Singularity Overlord', type: 'ANIMATED BANNER', desc: 'Unlocks the molten lava-orange Celestial Singularity black hole banner.' },
+  { level: 999, name: 'The Absolute Pinnacle', type: 'MAX ROAD & HOLO BANNER', desc: 'Completed Level Road! Unlocks MAX Level badge & holographic rainbow animated banner.' }
+];
+
+export const DEFAULT_LEADERBOARD_DATA = [
+  { username: 'ApexGamer', level: 999, exp: 0, totalExp: 999000, gamesPlayed: 280, bio: 'Classroom 9X speedrunner.' },
+  { username: 'CyberRonin', level: 412, exp: 12000, totalExp: 520000, gamesPlayed: 520, bio: 'Playing retro classics.' },
+  { username: 'NeonSpecter', level: 250, exp: 8400, totalExp: 310000, gamesPlayed: 215, bio: 'High score hunter.' },
+  { username: 'VoidWalker', level: 180, exp: 5000, totalExp: 195000, gamesPlayed: 178, bio: 'Drift and puzzle fan.' },
+  { username: 'GlitchMaster', level: 95, exp: 3200, totalExp: 92000, gamesPlayed: 142, bio: 'Arcade champion.' },
+  { username: 'ZeroDay', level: 60, exp: 2100, totalExp: 45000, gamesPlayed: 98, bio: 'Casual gamer.' },
+  { username: 'BitCrusher', level: 35, exp: 1200, totalExp: 22000, gamesPlayed: 64, bio: 'Exploring new releases.' },
+  { username: 'LogicBomb', level: 18, exp: 800, totalExp: 9500, gamesPlayed: 32, bio: 'Classroom 9X newcomer.' },
 ];
 
 export const BADGES = [
-  { id: 'first-contact', name: 'First Contact', requirement: 'Launch 1 Game', icon: Zap, color: '#64748b', rarity: 'Common' },
-  { id: 'sentinel', name: 'Guardian', requirement: 'Reach Level 10', icon: Award, color: '#22c55e', rarity: 'Uncommon' },
-  { id: 'archivist', name: 'Collector', requirement: '5 Favorites', icon: Heart, color: '#22c55e', rarity: 'Uncommon' },
-  { id: 'elite-squad', name: 'Elite Player', requirement: 'Reach Level 50', icon: Star, color: '#3b82f6', rarity: 'Rare' },
-  { id: 'data-hoarder', name: 'Big Collector', requirement: '10 Favorites', icon: Layers, color: '#3b82f6', rarity: 'Rare' },
-  { id: 'warlord', name: 'Gamer', requirement: '50 Games Played', icon: Target, color: '#3b82f6', rarity: 'Rare' },
-  { id: 'chameleon', name: 'Style King', requirement: '8 Themes Unlocked', icon: Palette, color: '#a855f7', rarity: 'Epic' },
-  { id: 'aesthetician', name: 'Frame Master', requirement: '4 Frames Unlocked', icon: PanelsTopLeft, color: '#a855f7', rarity: 'Epic' },
-  { id: 'recruiter', name: 'Character Fan', requirement: '4 Characters Unlocked', icon: User, color: '#a855f7', rarity: 'Epic' },
-  { id: 'overlord-badge', name: 'The Boss', requirement: 'Reach Level 100', icon: Crown, color: '#f59e0b', rarity: 'Legendary' },
-  { id: 'endurance', name: 'Pro Gamer', requirement: '100 Games Played', icon: Activity, color: '#f59e0b', rarity: 'Legendary' },
-  { id: 'the-glitch', name: 'The Secret', requirement: 'Found a secret!', icon: Binary, color: 'rainbow', rarity: 'Mythic' },
-  { id: 'owner-badge', name: 'Owner', requirement: 'Owner of the site', icon: Hammer, color: 'rainbow', rarity: 'Mythic' },
-  { id: 'tester-badge', name: 'Beta Tester', requirement: 'Tested the site early', icon: ShieldCheck, color: 'rainbow', rarity: 'Mythic' },
-  { id: 'stargazer', name: 'Stargazer', requirement: 'Witnessed a cosmic event', icon: Star, color: 'galaxy', rarity: 'Transcendent' },
-].sort((a, b) => RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity]);
+  { id: 'leaderboard-first', name: '1st Place', requirement: '1st Place on Leaderboard', icon: Medal, color: '#f59e0b', rarity: 'Mythic', desc: 'Awarded for holding 1st place on the EXP or Games Played leaderboard.' },
+  { id: 'leaderboard-top10', name: 'Top 10', requirement: 'Top 10 on Leaderboard', icon: Flame, color: '#8b5cf6', rarity: 'Legendary', desc: 'Awarded for reaching the top 10 on the leaderboard.' },
+  { id: 'grandmaster-999', name: 'MAX Level', requirement: 'Reach Level 999', icon: Trophy, color: 'rainbow', rarity: 'Transcendent', desc: 'Reached maximum Level 999.' },
+  { id: 'century-club', name: 'Level 100', requirement: 'Reach Level 100', icon: Award, color: '#3b82f6', rarity: 'Epic', desc: 'Reached Level 100.' },
+  { id: 'games-master', name: '100+ Games', requirement: 'Play 100+ Games', icon: Gamepad2, color: '#06b6d4', rarity: 'Epic', desc: 'Played 100 or more games.' },
+  { id: 'early-access', name: 'Early Access', requirement: 'Early Access Pioneer', icon: Hammer, color: '#a855f7', rarity: 'Rare', desc: 'Joined Cine during early access.' },
+  { id: 'site-owner', name: 'Site Owner', requirement: 'Cine Platform Owner', icon: Crown, color: '#fbbf24', rarity: 'Mythic', desc: 'Official platform owner of Cine.' },
+];
 
 export const QUEST_POOL = [
   { id: 'play-50', title: 'Grand Master', description: 'Play 50 games to prove your absolute dedication.', reward: 2500, progress: 0, target: 50, isCompleted: false, rarity: 'common', type: 'exp', questType: 'play' },
@@ -145,9 +205,9 @@ export const QUEST_POOL = [
     }
   },
   { 
-    id: 'quest-theme-retrofuture', 
-    title: 'Past Forward', 
-    description: 'Play 600 games to unlock the exclusive "Retro Future" Theme.', 
+    id: 'quest-theme-hologram', 
+    title: 'Holographic Dreams', 
+    description: 'Play 600 games to unlock the exclusive "Hologram Blue" Theme.', 
     reward: 0, 
     progress: 0, 
     target: 600, 
@@ -157,8 +217,8 @@ export const QUEST_POOL = [
     questType: 'play',
     rewardItem: {
       type: 'theme',
-      id: 'retrofuture',
-      name: 'Retro Future Theme'
+      id: 'hologram',
+      name: 'Hologram Blue Theme'
     }
   },
   { id: 'play-300', title: 'Eternal Gamer', description: 'Play 300 games. You are a legend.', reward: 20000, progress: 0, target: 300, isCompleted: false, rarity: 'epic', type: 'exp', questType: 'play' },

@@ -10,6 +10,8 @@
         "level": { "type": "number" },
         "exp": { "type": "number" },
         "score": { "type": "number" },
+        "totalExp": { "type": "number" },
+        "bio": { "type": "string" },
         "gamesPlayed": { "type": "number" },
         "currentCharacter": { "type": "string" },
         "currentFrame": { "type": "string" },
@@ -34,12 +36,16 @@
         "text": { "type": "string" },
         "senderUid": { "type": "string" },
         "senderName": { "type": "string" },
+        "username": { "type": "string" },
+        "recipientUid": { "type": "string" },
+        "recipientUsername": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" },
         "character": { "type": "string" },
         "frame": { "type": "string" },
-        "isAdmin": { "type": "boolean" }
+        "isAdmin": { "type": "boolean" },
+        "customAvatar": { "type": "string" }
       },
-      "required": ["text", "senderUid", "senderName", "timestamp"]
+      "required": ["text", "senderUid"]
     },
     "Announcement": {
       "title": "Announcement",
@@ -62,7 +68,9 @@
       "properties": {
         "isMaintenanceMode": { "type": "boolean" },
         "gameOfTheWeekId": { "type": "string" },
-        "gameOfTheWeekName": { "type": "string" }
+        "gameOfTheWeekName": { "type": "string" },
+        "lockedGames": { "type": "object" },
+        "includeOwnerInLeaderboard": { "type": "boolean" }
       }
     },
     "Suggestion": {
@@ -80,6 +88,24 @@
         "status": { "type": "string" }
       },
       "required": ["text", "authorId", "authorName", "votes"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Report for broken games or account rule violations",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetName": { "type": "string" },
+        "targetEmail": { "type": "string" },
+        "reason": { "type": "string" },
+        "details": { "type": "string" },
+        "reportedByUid": { "type": "string" },
+        "reportedByName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "targetId", "targetName", "reportedByUid", "createdAt"]
     }
   },
   "firestore": {
@@ -99,6 +125,10 @@
       "schema": "Suggestion",
       "description": "Player suggestions"
     },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Reports submitted by players for broken games or accounts"
+    },
     "/settings/global": {
       "schema": "GlobalSettings",
       "description": "Global site settings"
@@ -106,6 +136,10 @@
     "/admins/{userId}": {
       "schema": "object",
       "description": "Admin allowlist"
+    },
+    "/deleted_emails/{email}": {
+      "schema": "object",
+      "description": "Terminated accounts blocked email registry"
     }
   }
 }

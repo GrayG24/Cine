@@ -3,12 +3,20 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // --- Helpers ---
     function isSignedIn() { return request.auth != null; }
-    function isEmailVerified() { return isSignedIn() && request.auth.token.get('email_verified', false) == true; }
+    function isEmailVerified() { return isSignedIn() && 'email_verified' in request.auth.token && request.auth.token.email_verified == true; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     
     function isSuperAdmin() {
-      return isSignedIn() && 
-             (request.auth.token.get('email', '').lower() == 'softball_chik_007@yahoo.com');
+      return isSignedIn() && (
+        request.auth.uid == '8WTl89e5SnSCyyoPoHjvFUgg5nv2' ||
+        ('email' in request.auth.token && request.auth.token.email.lower() == 'softball_chik_007@yahoo.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('username', '').lower() == 'graycen') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'OWNER') ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && 
+         getAdminData().role == 'OWNER')
+      );
     }
 
     function getAdminData() {
@@ -69,7 +77,10 @@ service cloud.firestore {
       function isValidMessage(data) {
         return data.text is string && data.text.size() <= 500 &&
                data.senderUid == request.auth.uid &&
-               data.senderName is string;
+               (
+                 (('senderName' in data) && data.senderName is string && data.senderName.size() <= 64) ||
+                 (('username' in data) && data.username is string && data.username.size() <= 64)
+               );
       }
 
       allow list: if isSignedIn();
@@ -78,29 +89,39 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // --- Suggestions Collection ---
+    // --- Suggestions Collection (Restricted to Owner/Admin for viewing) ---
     match /suggestions/{suggestionId} {
       function isValidSuggestion(data) {
-        return data.text is string && data.text.size() <= 300 &&
+        return data.text is string && data.text.size() <= 500 &&
                data.authorId == request.auth.uid &&
                data.authorName is string &&
                data.votes is number;
       }
 
-      allow read: if isSignedIn();
+      allow read: if isAdmin();
       allow create: if isSignedIn() && isValidSuggestion(incoming()) && incoming().votes == 0;
-      allow update: if isSignedIn() && (
-        (incoming().diff(existing()).affectedKeys().hasOnly(['votes', 'voters', 'upvoters', 'downvoters']) && 
-         math.abs(incoming().votes - existing().votes) <= 2) ||
-        isAdmin()
-      );
-      allow delete: if (isSignedIn() && resource.data.authorId == request.auth.uid) || isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // --- Announcements Collection ---
     match /announcements/{announcementId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // --- Reports Collection ---
+    match /reports/{reportId} {
+      function isValidReport(data) {
+        return (data.type in ['game_broken', 'account_reported']) &&
+               (data.targetId is string) &&
+               (data.targetName is string) &&
+               (data.reportedByUid == request.auth.uid);
+      }
+
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && isValidReport(incoming());
+      allow update, delete: if isAdmin();
     }
 
     // --- Events Collection ---
@@ -118,11 +139,17 @@ service cloud.firestore {
     // --- Admin Allowlist ---
     match /admins/{userId} {
       function isValidAdmin(data) {
-        return data.email is string && 
+        return data.get('email', '') is string && 
                data.role in ['OWNER', 'MODERATOR'];
       }
       allow read: if isSignedIn();
-      allow write: if (isSuperAdmin() || (isOwner(userId) && hasAdminCode(get(/databases/$(database)/documents/users/$(userId)).data))) && isValidAdmin(incoming());
+      allow write: if (
+        isSuperAdmin() || 
+        (isOwner(userId) && 
+         exists(/databases/$(database)/documents/users/$(userId)) && 
+         hasAdminCode(get(/databases/$(database)/documents/users/$(userId)).data)
+        )
+      ) && isValidAdmin(incoming());
     }
 
     // --- Deleted Emails List ---

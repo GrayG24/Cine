@@ -1,8 +1,6 @@
 {
-  "name": "Classroom 9x Games",
-  "description": "The elite unblocked library for high-performance browser gaming. Features zero lag, zero blocks, and a highly customizable UI with themes, frames, and character avatars.",
+  "name": "Cine",
+  "description": "The elite gaming and apps dashboard platform. Features zero lag games, built-in Cine Cinema, Cine Stream live broadcasts, Spotify music, and real-time global player chat.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }

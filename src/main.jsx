@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// Suppress benign sandbox-specific WebSocket and HMR errors
+// Suppress benign sandbox-specific WebSocket, HMR, and storage/quota errors
 const SUPPRESS_PATTERNS = [
   'websocket',
   'failed to connect',
@@ -11,7 +11,11 @@ const SUPPRESS_PATTERNS = [
   'sockjs-node',
   'connection closed',
   'connection refused',
-  'vite-hmr'
+  'vite-hmr',
+  'quota exceeded',
+  'quotaexceedederror',
+  'resource-exhausted',
+  'resource_exhausted'
 ];
 
 const shouldSuppress = (msg) => {

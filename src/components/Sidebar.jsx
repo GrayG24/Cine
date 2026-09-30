@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { House, Library, Sparkles, Settings, Crown, Shield, Ghost, Bot, Star, Cat, Rocket, Clock, User, Users, Trophy, Zap, ChevronRight, LayoutGrid, Search, Menu, X, ZapOff, MessageSquare, Music, Key, Gamepad2, Globe, Palette, Sun, Power, Hammer } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { AppRoute, CHARACTERS } from '../constants';
+import { House, Gamepad2, LayoutGrid, MessageSquare, Settings as SettingsIcon, User, ShieldAlert, Crown } from 'lucide-react';
+import { motion } from 'motion/react';
+import { AppRoute, CHARACTERS, isPlatformOwner } from '../constants';
+import { Logo } from './Logo';
 
 export const Sidebar = ({ 
   user, 
   currentView, 
-  onViewChange,
-  onProfileClick,
-  onLogin,
-  onLogout,
-  firebaseUser,
-  isExpanded,
-  onToggleExpand,
-  onlineCount: propOnlineCount
+  onViewChange, 
+  onProfileClick, 
+  onLogin, 
+  onLogout, 
+  firebaseUser, 
+  isExpanded, 
+  onToggleExpand, 
+  onlineCount: propOnlineCount 
 }) => {
   const [time, setTime] = useState(new Date());
   const [localOnlineCount, setLocalOnlineCount] = useState(1);
@@ -28,7 +29,11 @@ export const Sidebar = ({
     const fetchStatus = () => {
       fetch('/api/system/status')
         .then(res => res.json())
-        .then(data => setLocalOnlineCount(data.activeUsers || 1))
+        .then(data => {
+          if (data && typeof data.activeUsers === 'number') {
+            setLocalOnlineCount(data.activeUsers);
+          }
+        })
         .catch(() => {});
     };
     fetchStatus();
@@ -37,309 +42,199 @@ export const Sidebar = ({
   }, [propOnlineCount]);
 
   const onlineCount = propOnlineCount !== undefined ? propOnlineCount : localOnlineCount;
-
   const currentChar = CHARACTERS.find(c => c.id === user.currentCharacter) || CHARACTERS[0];
+  const sidebarTransition = { duration: 0.65, ease: [0.22, 1, 0.36, 1] };
 
-  const isPotatoMode = user?.settings?.performanceMode;
+  // Owner check: softball_chik_007@yahoo.com, Graycen, or role OWNER
+  const isOwner = isPlatformOwner(user, firebaseUser);
 
-  const rawMenuItems = [
-    { id: AppRoute.HOME, label: 'Home', icon: House, isReleased: true },
-    { id: AppRoute.LIBRARY, label: 'Games', icon: Gamepad2, isReleased: true },
-    { id: AppRoute.SUMMER, label: 'Summer Countdown', icon: Sun, isReleased: true, accentColor: 'text-orange-400', beachBonus: true },
-    { id: AppRoute.APPS, label: 'Apps', icon: LayoutGrid, isReleased: false },
-    { id: AppRoute.CUSTOMIZATION, label: 'Customization', icon: Palette, isReleased: false },
-    { id: AppRoute.SETTINGS, label: 'Settings', icon: Settings, isReleased: true },
+  const menuItems = [
+    { id: AppRoute.HOME, label: 'Dashboard', icon: House },
+    { id: AppRoute.LIBRARY, label: 'Games', icon: Gamepad2 },
+    { id: AppRoute.APPS, label: 'Apps & Media', icon: LayoutGrid },
+    { id: AppRoute.ACCOUNT, label: 'Profile', icon: User },
+    { id: AppRoute.CHAT, label: 'Messages', icon: MessageSquare },
+    { id: AppRoute.SETTINGS, label: 'Settings', icon: SettingsIcon },
   ];
 
-  const menuItems = rawMenuItems.filter(item => {
-    // If Hide Unreleased is enabled, strictly hide items where isReleased is false
-    if (user?.settings?.hideUnreleased && item.isReleased === false) return false;
-    
-    return true;
-  });
+  // ONLY show Owner Portal if user is the Owner
+  if (isOwner) {
+    menuItems.push({
+      id: AppRoute.OWNER,
+      label: 'Owner Portal',
+      icon: Crown,
+      isOwnerSpecial: true
+    });
+  }
 
   return (
-    <motion.div 
-      onMouseEnter={() => user.settings.sidebarAutoHide && onToggleExpand(true)}
-      onMouseLeave={() => user.settings.sidebarAutoHide && onToggleExpand(false)}
+    <motion.aside
+      onMouseEnter={() => onToggleExpand(true)}
+      onMouseLeave={() => {
+        if (user?.settings?.sidebarAutoHide !== false) {
+          onToggleExpand(false);
+        }
+      }}
       initial={false}
       animate={{ 
-        width: isExpanded ? 280 : 88,
-        opacity: 1
+        width: isExpanded ? 270 : 80,
       }}
-      transition={{ 
-        width: { type: "spring", stiffness: 120, damping: 22, mass: 1 },
-        opacity: { duration: 0.4 }
-      }}
-      className="global-sidebar-panel fixed left-6 top-6 bottom-6 z-50 flex flex-col shrink-0 shadow-[20px_0_100px_rgba(0,0,0,0.5)] bg-black/60 backdrop-blur-[24px] border border-white/10 rounded-[2.5rem]"
-      style={{ willChange: 'transform, width' }}
+      transition={sidebarTransition}
+      className="fixed left-4 top-4 bottom-4 z-50 flex flex-col bg-[#0b0e14]/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden pointer-events-auto"
     >
-      {/* Logo Section */}
-      <div className={`flex flex-col items-center w-full shrink-0 transition-all duration-500 h-24 ${isExpanded ? 'p-8 pb-4' : 'justify-center'}`}>
-        <div 
-          className={`flex items-center gap-4 w-full h-full ${isExpanded ? 'justify-start px-2' : 'justify-center'}`}
+      {/* Brand Header */}
+      <div className={`h-20 flex items-center shrink-0 border-b border-white/5 transition-all ${
+        isExpanded ? 'px-4 justify-start' : 'px-0 justify-center'
+      }`}>
+        <motion.div 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => onViewChange(AppRoute.HOME)}
+          className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 flex items-center justify-center shrink-0 cursor-pointer shadow-[0_0_20px_rgba(59,130,246,0.25)] p-1"
         >
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            className={`w-12 h-12 rounded-xl border overflow-hidden flex items-center justify-center shrink-0 group cursor-pointer transition-colors ${
-              currentView === AppRoute.SUMMER ? 'bg-white border-orange-200' : 'bg-black border-white/10'
-            }`}
-          >
-            <img 
-              src="https://1key.lol/images/ui/key-turning.gif" 
-              alt="Logo" 
-              className="w-full h-full object-cover" 
-              referrerPolicy="no-referrer"
-            />
-          </motion.div>
-          <AnimatePresence mode="popLayout" initial={false}>
-            {isExpanded && (
-              <motion.div 
-                key="logo-text"
-                initial={{ opacity: 0, x: -10, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, x: -20, filter: 'blur(8px)' }}
-                transition={{ duration: 0.4, ease: "circOut" }}
-                className="flex flex-col pr-8"
-              >
-                <span className="font-black text-xl tracking-tighter leading-tight italic whitespace-nowrap text-white">
-                  CLASSROOM <span className="text-white/40">9X</span>
-                </span>
-                <span className="text-[7px] font-black uppercase tracking-[0.4em] mt-1 italic text-white/30">UNBLOCKED GAMES</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+          <Logo />
+        </motion.div>
+
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: isExpanded ? 1 : 0,
+            width: isExpanded ? 160 : 0,
+            marginLeft: isExpanded ? 12 : 0,
+          }}
+          transition={sidebarTransition}
+          className="flex flex-col overflow-hidden whitespace-nowrap"
+        >
+          <span className="font-black text-xl italic tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 leading-none">
+            CINE
+          </span>
+          <span className="text-[9px] font-bold tracking-widest text-purple-400 uppercase mt-1">
+            APPS & GAMES
+          </span>
+        </motion.div>
       </div>
 
-      {/* Navigation */}
-      <nav className={`flex-1 space-y-2 mt-6 ${isExpanded ? 'px-4 items-start' : 'px-0 items-center'} flex flex-col w-full overflow-y-auto overflow-x-hidden scrollbar-hide scroll-smooth`}>
+      {/* Nav Navigation */}
+      <nav className={`flex-1 py-4 space-y-1.5 overflow-y-auto no-scrollbar transition-all ${
+        isExpanded ? 'px-3' : 'px-2 flex flex-col items-center'
+      }`}>
         {menuItems.map((item) => {
           const isActive = currentView === item.id;
-          const isRed = 'color' in item && item.color === 'text-rose-500';
-          const isComingSoon = item.isReleased === false;
-          const isBroken = 'isBroken' in item && item.isBroken === true;
-          
+          const isOwnerTab = item.isOwnerSpecial;
+
           return (
-            <motion.button
+            <button
               key={item.id}
-              initial={false}
-              animate={{
-                width: isExpanded ? "100%" : "3.5rem",
-                borderRadius: isExpanded ? "1.5rem" : "1.2rem",
-                opacity: (isComingSoon && !isActive) || (isBroken && !isActive) ? 0.6 : 1
-              }}
-              transition={{
-                duration: 0.35,
-                ease: [0.16, 1, 0.3, 1]
-              }}
-              whileHover={{ 
-                scale: (isComingSoon && !isActive) || (isBroken && !isActive) ? 1.01 : 1.04,
-                x: isExpanded ? 8 : 0
-              }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if ((!isComingSoon && !isBroken) || !user?.settings?.hideUnreleased || user.isAdmin) {
-                  onViewChange(item.id);
-                }
-              }}
-              className={`h-14 flex items-center relative overflow-hidden transition-all duration-300 ${
-                isActive 
-                  ? `${isRed ? 'bg-rose-500 text-white shadow-[0_0_30px_rgba(244,63,94,0.3)]' : item.beachBonus ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-cyan-400 text-yellow-300 shadow-[0_10px_30px_rgba(34,211,238,0.4)] border-b-2 border-yellow-300' : 'bg-white/20 text-white shadow-[0_0_40px_rgba(255,255,255,0.1)] border border-white/20'} font-black italic` 
-                  : `${isRed ? 'text-rose-500/60 hover:text-rose-500 hover:bg-rose-500/10' : item.beachBonus ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-cyan-400 text-yellow-100 shadow-lg border border-white/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`
-              } ${(isComingSoon || isBroken) && !isActive ? 'cursor-not-allowed grayscale' : ''} ${isExpanded ? 'px-4' : 'justify-center'}`}
+              onClick={() => onViewChange(item.id)}
+              className={`h-12 flex items-center rounded-2xl transition-all duration-200 group relative ${
+                isExpanded ? 'w-full px-3.5 justify-start' : 'w-12 justify-center px-0'
+              } ${
+                isOwnerTab
+                  ? isActive
+                    ? 'bg-gradient-to-r from-amber-500/25 to-orange-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.35)] font-black'
+                    : 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 font-bold'
+                  : isActive 
+                    ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/15 text-blue-300 border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)] font-bold' 
+                    : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+              }`}
             >
-              {item.beachBonus && (
-                 <div className="absolute inset-0 opacity-40 pointer-events-none overflow-hidden">
-                   <motion.div 
-                    animate={{ y: [0, 10, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute bottom-0 left-0 right-0 h-[60%] bg-gradient-to-t from-cyan-400/40 to-transparent blur-sm" 
-                   />
-                   <motion.div 
-                    animate={{ x: [-20, 20, -20], scale: [1, 1.2, 1] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute -top-4 -right-4 w-12 h-12 rounded-full bg-yellow-400/30 blur-xl" 
-                   />
-                 </div>
-              )}
-              <div className={`w-6 h-6 flex items-center justify-center shrink-0 relative z-10 pointer-events-none ${isActive && item.beachBonus ? 'animate-pulse' : ''}`}>
-                <item.icon size={20} className={isActive ? (isRed || item.beachBonus ? 'text-inherit' : 'text-inherit') : (isRed ? 'text-rose-500/60 group-hover:text-rose-500' : item.beachBonus ? 'text-yellow-200/80 group-hover:text-yellow-100' : 'text-white/40 group-hover:text-white')} />
-              </div>
-              <AnimatePresence mode="popLayout" initial={false}>
-                  {isExpanded && (
-                    <motion.div 
-                      key={`${item.id}-label`}
-                      initial={{ opacity: 0, x: -15, filter: 'blur(4px)' }}
-                      animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                      exit={{ opacity: 0, x: -15, filter: 'blur(4px)' }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="ml-4 flex flex-col items-start relative z-10 whitespace-nowrap pointer-events-none"
-                    >
-                      <span className={`text-[10px] font-black uppercase tracking-[0.2em] italic ${isActive ? (isRed || item.beachBonus ? 'text-inherit' : 'text-inherit') : ''}`}>
-                        {item.label}
-                      </span>
-                      {isComingSoon && !isActive && (
-                        <span className="text-[6px] font-black tracking-widest text-white/40 -mt-0.5">COMING SOON</span>
-                      )}
-                      {isBroken && !isActive && (
-                        <span className="text-[6px] font-black tracking-widest text-rose-500 -mt-0.5">BROKEN</span>
-                      )}
-                    </motion.div>
+              <item.icon 
+                size={20} 
+                className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                  isOwnerTab
+                    ? 'text-amber-400 group-hover:text-amber-300'
+                    : isActive 
+                      ? 'text-blue-400' 
+                      : 'text-white/50 group-hover:text-white'
+                }`} 
+              />
+
+              {isExpanded && (
+                <motion.div
+                  initial={false}
+                  animate={{
+                    opacity: 1,
+                    width: 160,
+                    marginLeft: 12,
+                  }}
+                  transition={sidebarTransition}
+                  className="overflow-hidden whitespace-nowrap text-left flex items-center justify-between flex-1"
+                >
+                  <span className="text-xs font-bold uppercase tracking-wider block">
+                    {item.label}
+                  </span>
+                  {isOwnerTab && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[8px] font-black uppercase tracking-tighter ml-2">
+                      OWNER
+                    </span>
                   )}
-              </AnimatePresence>
-            </motion.button>
+                </motion.div>
+              )}
+
+              {isActive && (
+                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full shadow-md ${
+                  isOwnerTab 
+                    ? 'bg-gradient-to-b from-amber-400 to-orange-500 shadow-[0_0_10px_#f59e0b]'
+                    : 'bg-gradient-to-b from-blue-400 to-purple-500 shadow-[0_0_10px_#60a5fa]'
+                }`} />
+              )}
+            </button>
           );
         })}
       </nav>
 
-      {/* Profile Section */}
-      <div className={`mt-auto border-t border-white/10 flex flex-col gap-4 ${isExpanded ? 'p-4 items-start' : 'p-4 items-center'} w-full shrink-0 transition-all duration-300`}>
-        <motion.button 
-          onClick={onProfileClick}
-          className={`w-full flex items-center transition-all group overflow-hidden relative ${isExpanded ? 'gap-4 p-2.5 rounded-2xl bg-white/[0.03] border border-white/5' : 'justify-center p-0 w-12 h-12 rounded-xl bg-white/[0.05] border border-white/10'} hover:bg-white/10 hover:border-white/20`}
+      {/* Online Status & Footer Profile */}
+      <div className={`p-3 border-t border-white/5 flex flex-col gap-2 shrink-0 transition-all ${
+        isExpanded ? 'items-stretch' : 'items-center'
+      }`}>
+        <div 
+          onClick={() => {
+            if (onViewChange) {
+              onViewChange(AppRoute.ACCOUNT);
+            } else if (onProfileClick) {
+              onProfileClick();
+            }
+          }}
+          className={`flex items-center rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer transition-all group ${
+            isExpanded ? 'w-full p-2.5 justify-start gap-3' : 'w-12 h-12 justify-center p-0 gap-0'
+          }`}
         >
-          {isExpanded && <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>}
-          
-          <div className="relative shrink-0 flex items-center justify-center z-10">
-            <div className={`w-9 h-9 rounded-full bg-black border border-white/20 overflow-hidden flex items-center justify-center text-white group-hover:scale-105 transition-all duration-500 shadow-2xl`}>
-              {currentChar.img ? (
-                <img src={currentChar.img} alt={currentChar.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+          <div className="relative w-9 h-9 shrink-0">
+            <div className="w-full h-full rounded-full bg-black border border-white/10 overflow-hidden flex items-center justify-center">
+              {user?.customAvatar ? (
+                <img src={user.customAvatar} alt={user.username} className="w-full h-full object-cover rounded-full" />
               ) : (
-                <span className="text-lg font-black">{user.username[0]}</span>
+                <div className="w-full h-full flex items-center justify-center text-blue-300/80 bg-white/5 rounded-full">
+                  <User size={18} />
+                </div>
               )}
             </div>
-            <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-black z-20 ${!isExpanded ? 'w-2.5 h-2.5 -bottom-0.5 -right-0.5' : ''}`}></div>
+            <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#0b0e14] ${
+              firebaseUser && !firebaseUser.isAnonymous ? 'bg-emerald-500' : 'bg-cyan-400 animate-pulse'
+            }`} />
           </div>
-          
-          <AnimatePresence initial={false}>
-            {isExpanded && (
-              <motion.div 
-                key="profile-text"
-                initial={{ opacity: 0, x: -10, filter: 'blur(4px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, x: -20, filter: 'blur(4px)' }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="flex flex-col min-w-0 z-10 text-left"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black text-white uppercase tracking-tight truncate italic">{user.username}</span>
-                  {user.isAdmin && <Shield size={8} className="text-rose-500" />}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.2em] italic leading-none">LVL {user.level}</span>
-                  <div className="w-1 h-1 rounded-full bg-white/10"></div>
-                  <span className="text-[7px] font-black text-emerald-400 uppercase tracking-widest italic leading-none">ONLINE</span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
+
           {isExpanded && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.2 }}
-              className="ml-auto group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+            <motion.div
+              initial={false}
+              animate={{
+                opacity: 1,
+                width: 150,
+                marginLeft: 12,
+              }}
+              transition={sidebarTransition}
+              className="overflow-hidden whitespace-nowrap text-left flex-1 min-w-0"
             >
-              <ChevronRight size={14} className="text-white" />
+              <p className="text-xs font-black text-white uppercase italic truncate">
+                {user?.username || 'Player'}
+              </p>
+              <p className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider truncate">
+                {firebaseUser && !firebaseUser.isAnonymous ? `Level ${user?.level || 1}` : 'Sign In / Account'}
+              </p>
             </motion.div>
           )}
-        </motion.button>
-
-        <div className={`mt-4 w-full ${isExpanded ? 'px-4' : 'px-2'}`}>
-          {firebaseUser ? (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onLogout}
-              className={`w-full flex items-center gap-4 h-12 rounded-xl transition-all relative overflow-hidden group ${
-                isExpanded ? 'px-6 bg-white/5 border border-white/5' : 'justify-center bg-white/5'
-              } hover:bg-rose-500/20 hover:border-rose-500/30 text-rose-500`}
-            >
-              <Power size={18} />
-              {isExpanded && <span className="text-[10px] font-black uppercase tracking-widest italic group-hover:text-rose-400">LOGOUT</span>}
-            </motion.button>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onLogin}
-                className={`w-full flex items-center gap-4 h-12 rounded-xl transition-all relative overflow-hidden group ${
-                  isExpanded ? 'px-6 bg-primary/20 border border-primary/20' : 'justify-center bg-primary/20'
-                } hover:bg-primary/30 hover:border-primary/40 text-primary shadow-[0_0_30px_rgba(var(--primary-rgb),0.1)]`}
-              >
-                <User size={18} />
-                {isExpanded && <span className="text-[10px] font-black uppercase tracking-widest italic">SIGN IN</span>}
-              </motion.button>
-              {isExpanded && (
-                <button 
-                  onClick={() => window.open(window.location.href, '_blank')}
-                  className="text-[7px] font-black text-white/20 hover:text-white/60 transition-colors uppercase tracking-[0.2em] italic text-center w-full"
-                >
-                  Trouble signing in? Open in new tab
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className={`flex flex-col gap-2 w-full ${isExpanded ? 'px-1' : 'items-center'}`}>
-          <div 
-            className={`flex items-center transition-all bg-white/[0.02] border border-white/5 shadow-inner ${isExpanded ? 'gap-3 px-3 py-2.5 rounded-xl w-full' : 'w-12 flex-col justify-center h-auto min-h-12 py-2 px-0 rounded-xl'}`}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              {isExpanded ? (
-                <motion.div 
-                  key="expanded-stats"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center justify-between w-full"
-                >
-                  <div className="flex flex-col text-left">
-                    <span className="text-[7px] font-black text-white/20 uppercase tracking-widest italic mb-0.5">EST TIME</span>
-                    <span className="text-[10px] font-black text-white/80 tabular-nums uppercase tracking-tighter italic">
-                      {time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="text-[7px] font-black text-white/20 uppercase tracking-widest italic mb-0.5">ACTIVE</span>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
-                      <span className="text-[10px] font-black text-emerald-500 tabular-nums italic">
-                        {onlineCount}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key="collapsed-stats"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex flex-col items-center gap-1.5 py-1"
-                >
-                  <div className="flex flex-col items-center leading-none">
-                    <span className="text-[10px] font-black text-white italic tabular-nums leading-none">
-                      {time.getHours() % 12 || 12}
-                    </span>
-                    <div className="w-4 h-px bg-white/20 my-0.5"></div>
-                    <span className="text-[10px] font-black text-white/60 italic tabular-nums leading-none">
-                      {time.getMinutes().toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                  <div className="w-4 h-px bg-white/10 my-0.5"></div>
-                  <span className="text-[9px] font-black text-emerald-500 tabular-nums leading-none">{onlineCount}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
       </div>
-    </motion.div>
+    </motion.aside>
   );
 };

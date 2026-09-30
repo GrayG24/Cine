@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Logo } from './Logo';
+import { ChevronRight, Sparkles } from 'lucide-react';
 
 export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
   const [progress, setProgress] = useState(0);
@@ -247,12 +249,16 @@ export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
     requestAnimationFrame(updateLoader);
   }, []);
 
-  // Handle Konami sequence
+  // Handle Konami and Doge sequences
   useEffect(() => {
     const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight'];
     let konamiIndex = 0;
 
+    const dogeCode = ['1', '2', '1', '2'];
+    let dogeIndex = 0;
+
     const handleKeyDown = (e) => {
+      // Check Konami Code
       if (e.key === konamiCode[konamiIndex]) {
         konamiIndex++;
         if (konamiIndex === konamiCode.length) {
@@ -260,8 +266,25 @@ export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
           setIsWarping(true);
           warpSpeedRef.current = 18;
           
+          // Trigger the huge shooting star visually immediately!
+          try {
+            shootingStarsRef.current.push({
+              x: -500,
+              y: Math.random() * (window.innerHeight * 0.3) + 50,
+              len: 3000 + Math.random() * 1000,
+              dx: 35 + Math.random() * 8,
+              dy: 8 + Math.random() * 3,
+              life: 2.0,
+              color: 'rgba(255, 223, 100, 1)',
+              isHuge: true,
+              triggeredEvent: false
+            });
+          } catch (err) {
+            console.error('Error spawning huge star:', err);
+          }
+
           if (onCosmicEvent) {
-            try { onCosmicEvent(); } catch (e) {}
+            try { onCosmicEvent(); } catch (err) {}
           }
           
           setTimeout(() => {
@@ -272,7 +295,19 @@ export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
           konamiIndex = 0;
         }
       } else {
-        konamiIndex = 0;
+        konamiIndex = e.key === 'ArrowUp' ? 1 : 0;
+      }
+
+      // Check Doge Code
+      if (e.key === dogeCode[dogeIndex]) {
+        dogeIndex++;
+        if (dogeIndex === dogeCode.length) {
+          // Trigger doge loading event
+          setHasDoge(true);
+          dogeIndex = 0;
+        }
+      } else {
+        dogeIndex = e.key === '1' ? 1 : 0;
       }
     };
 
@@ -348,6 +383,7 @@ export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
                   console.error('Error triggering doge cosmic event:', e);
                 }
               }
+              setHasDoge(false);
             }}
           />
         )}
@@ -362,17 +398,23 @@ export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
         <div className="w-full h-8" />
 
         {/* Center Title Showcase Section */}
-        <div className="flex flex-col items-center gap-12 w-full my-auto">
+        <div className="flex flex-col items-center gap-6 w-full my-auto">
           <div className="relative flex flex-col items-center">
             {/* Ambient Background Glowing Orb behind title */}
             <div className="absolute -inset-10 bg-indigo-500/5 blur-[60px] rounded-full pointer-events-none" />
             
-            <div className="flex items-center gap-4">
-              <span className="text-4xl md:text-5xl font-extrabold italic uppercase text-white tracking-[0.25em] font-sans drop-shadow-sm select-none">
-                CLASSROOM
-              </span>
-              <span className="text-4xl md:text-5xl font-black italic uppercase text-white tracking-normal drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] font-sans select-none">
-                9X
+            {/* Spinning Brand Logo */}
+            <motion.div 
+              animate={{ rotate: 360 }}
+              transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+              className="w-20 h-20 mb-8 text-white relative flex items-center justify-center filter drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+            >
+              <Logo className="w-full h-full" />
+            </motion.div>
+
+            <div className="flex items-center justify-center">
+              <span className="text-5xl md:text-6xl font-black italic uppercase text-white tracking-[0.35em] font-sans drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] select-none">
+                CINE
               </span>
             </div>
 
@@ -389,22 +431,22 @@ export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
                   initial={{ opacity: 1 }}
                   exit={{ opacity: 0, y: -10, filter: 'blur(8px)' }}
                   transition={{ duration: 0.3 }}
-                  className="w-full flex flex-col items-center gap-3"
+                  className="w-full flex flex-col items-center gap-4"
                 >
                   <div className="w-full flex justify-between items-end px-1">
-                    <span className="text-[10px] font-black text-white/70 tracking-[0.3em] uppercase italic animate-pulse">
-                      {progress < 40 ? 'SECURE_LINK' : progress < 85 ? 'STABILIZING_MATRIX' : 'READY_TO_LAUNCH'}
+                    <span className="text-[9px] font-black text-white/40 tracking-[0.3em] uppercase italic animate-pulse">
+                      {progress < 40 ? 'LOADING DATABASE' : progress < 85 ? 'PREPARING CORE INTERFACE' : 'SYSTEM READY'}
                     </span>
-                    <span className="text-[11px] font-black text-white/50 tracking-widest font-mono select-none">
+                    <span className="text-[10px] font-black text-white/50 tracking-widest font-mono select-none">
                       {Math.round(progress)}%
                     </span>
                   </div>
                   
                   {/* Microscopic Load Meter */}
-                  <div className="w-full h-[2px] bg-white/[0.04] relative rounded-full overflow-hidden">
+                  <div className="w-full h-[4px] bg-white/[0.04] relative rounded-full overflow-hidden border border-white/5 shadow-inner">
                     <div 
                       style={{ width: `${progress}%` }}
-                      className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full transition-all duration-75 ease-out shadow-[0_0_12px_rgba(59,130,246,0.8)]"
                     />
                   </div>
                 </motion.div>
@@ -414,14 +456,21 @@ export const LoadingScreen = ({ onComplete, onCosmicEvent }) => {
                   initial={{ opacity: 0, scale: 0.95, filter: 'blur(8px)' }}
                   animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex flex-col items-center gap-2"
+                  className="w-full flex items-center justify-center text-center"
                 >
                   <button
                     onClick={handleEnter}
                     disabled={stage === 'entering'}
-                    className="pointer-events-auto px-12 py-4 rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-md text-white text-[11px] font-black tracking-[0.4em] uppercase italic transition-all duration-300 hover:bg-white hover:text-[#030407] hover:border-white shadow-[0_0_30px_rgba(255,255,255,0.05)] cursor-pointer active:scale-95 flex items-center justify-center"
+                    className="pointer-events-auto group relative mx-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-purple-600/20 to-amber-500/20 border-2 border-white/20 hover:border-cyan-400/80 backdrop-blur-2xl text-white font-black text-xs uppercase italic tracking-widest transition-all duration-300 shadow-[0_0_35px_rgba(59,130,246,0.35)] hover:shadow-[0_0_55px_rgba(168,85,247,0.6)] cursor-pointer active:scale-95 flex items-center justify-center gap-2 overflow-hidden text-center"
                   >
-                    ENTER
+                    {/* Ambient glow inside button */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 via-purple-500/10 to-amber-400/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      <Sparkles size={14} className="text-yellow-400 animate-pulse" />
+                      <span>ENTER CINE</span>
+                      <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform text-cyan-300" />
+                    </span>
                   </button>
                 </motion.div>
               )}

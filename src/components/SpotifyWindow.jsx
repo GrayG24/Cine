@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'motion/react';
-import { X, GripHorizontal, Music, ExternalLink, Minus, Maximize2 } from 'lucide-react';
+import { X, GripHorizontal, Music, ExternalLink, Minus, Maximize2, Sparkles } from 'lucide-react';
 
 export const SpotifyWindow = ({ 
   isOpen, 
@@ -9,7 +9,7 @@ export const SpotifyWindow = ({
   onToggleFullScreen 
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [size, setSize] = useState({ width: 600, height: 750 });
+  const [size, setSize] = useState({ width: 640, height: 780 });
   const constraintsRef = useRef(null);
   const dragControls = useDragControls();
 
@@ -23,8 +23,8 @@ export const SpotifyWindow = ({
     const handleMouseMove = (e) => {
       if (!resizeRef.current) return;
       setSize(prev => ({
-        width: Math.max(300, Math.min(window.innerWidth - 48, e.clientX - (window.innerWidth - prev.width - 24))),
-        height: Math.max(200, Math.min(window.innerHeight - 100, e.clientY - (window.innerHeight - prev.height - 24)))
+        width: Math.max(320, Math.min(window.innerWidth - 48, e.clientX - (window.innerWidth - prev.width - 24))),
+        height: Math.max(240, Math.min(window.innerHeight - 100, e.clientY - (window.innerHeight - prev.height - 24)))
       }));
     };
     const handleMouseUp = () => {
@@ -43,7 +43,7 @@ export const SpotifyWindow = ({
     <AnimatePresence>
       {isOpen && (
         <>
-          {!isFullScreen && <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-[999]" />}
+          <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-[999]" />
           <motion.div
             drag={!isFullScreen}
             dragMomentum={false}
@@ -63,17 +63,17 @@ export const SpotifyWindow = ({
               zIndex: isFullScreen ? 40 : 1000
             }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bg-black/90 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col"
+            className="fixed bg-black/90 backdrop-blur-3xl border border-blue-500/20 shadow-[0_30px_100px_rgba(59,130,246,0.25)] overflow-hidden flex flex-col"
           >
             {/* Header */}
-            <div className={`h-16 shrink-0 px-6 flex items-center justify-between border-b border-white/5 bg-white/5 ${!isFullScreen ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+            <div className={`h-16 shrink-0 px-6 flex items-center justify-between border-b border-blue-500/20 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-transparent ${!isFullScreen ? 'cursor-grab active:cursor-grabbing' : ''}`}>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/20 overflow-hidden relative">
-                   <Music className="text-green-500 w-4 h-4" />
+                <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30 overflow-hidden relative shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                   <Music className="text-blue-400 w-4 h-4 animate-pulse" />
                 </div>
                 {!effectiveMinimized && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Spotify Player</span>
+                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em] italic">Vapor Music</span>
                   </div>
                 )}
               </div>
@@ -82,7 +82,7 @@ export const SpotifyWindow = ({
                 {!isFullScreen && (
                   <button 
                     onClick={() => setIsMinimized(!isMinimized)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-blue-400 hover:bg-white/5 transition-all"
                   >
                     {effectiveMinimized ? <Maximize2 size={14} /> : <Minus size={14} />}
                   </button>
@@ -90,7 +90,7 @@ export const SpotifyWindow = ({
                 {isFullScreen ? (
                   <button 
                     onClick={onToggleFullScreen}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 hover:text-white hover:bg-blue-500/20 transition-all text-[10px] font-black uppercase tracking-widest italic"
                   >
                     <ExternalLink size={12} />
                     <span>Pop Out</span>
@@ -99,7 +99,7 @@ export const SpotifyWindow = ({
                   !effectiveMinimized && onToggleFullScreen && (
                     <button 
                       onClick={onToggleFullScreen}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-blue-400 hover:bg-white/5 transition-all"
                       title="Full Screen"
                     >
                       <Maximize2 size={14} />
@@ -118,17 +118,17 @@ export const SpotifyWindow = ({
             {/* Content */}
             <div className={`flex-1 relative transition-all duration-500 ${effectiveMinimized ? 'opacity-0 pointer-events-none' : 'opacity-100 p-2'}`}>
               <iframe 
-                key="spotify-persistent-iframe"
+                key="vapor-music-persistent-iframe"
                 style={{ borderRadius: isFullScreen ? '32px' : '20px' }} 
-                src="https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM3M" 
+                src="https://vaperisveryeducational.dinprima.ro/page/music/" 
                 width="100%" 
                 height="100%" 
                 frameBorder="0" 
                 allowFullScreen={true} 
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 loading="lazy"
-                title="Spotify Player"
-                className="bg-black/20 shadow-inner w-full h-full"
+                title="Vapor Music Player"
+                className="bg-black/40 shadow-inner w-full h-full"
               ></iframe>
             </div>
 
@@ -142,8 +142,8 @@ export const SpotifyWindow = ({
                 }}
                 className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize flex items-center justify-center z-50 p-2 group"
               >
-                <div className="w-1.5 h-1.5 bg-white/20 group-hover:bg-white/50 rounded-full transition-colors" />
-                <div className="absolute bottom-1 right-1 w-4 h-4 border-r-2 border-b-2 border-white/20 group-hover:border-white/50 rounded-br-md transition-colors" />
+                <div className="w-1.5 h-1.5 bg-blue-500/30 group-hover:bg-blue-500/60 rounded-full transition-colors" />
+                <div className="absolute bottom-1 right-1 w-4 h-4 border-r-2 border-b-2 border-blue-500/30 group-hover:border-blue-500/60 rounded-br-md transition-colors" />
               </div>
             )}
 
@@ -157,12 +157,12 @@ export const SpotifyWindow = ({
                   className="absolute inset-0 flex items-center px-6 pointer-events-none"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.5)]">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.5)]">
                       <Music size={16} />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Active Session</span>
-                      <span className="text-[8px] text-white/40 font-bold uppercase tracking-widest">Spotify Playing</span>
+                      <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Active Player</span>
+                      <span className="text-[8px] text-white/40 font-bold uppercase tracking-widest">Vaporwave Beats</span>
                     </div>
                   </div>
                 </motion.div>

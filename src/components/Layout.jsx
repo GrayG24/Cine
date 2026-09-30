@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { House, Gamepad2, LayoutGrid, Globe, Shield, Palette, Settings as SettingsIcon, User, Users, Music, Key, Waves } from 'lucide-react';
 import { AppRoute } from '../constants'; // Changed from types to constants
 import { FPSCounter } from './FPSCounter';
-import { SpotifyWindow } from './SpotifyWindow';
 import { Sidebar } from './Sidebar';
 
 const WaveTransition = ({ isVisible }) => (
@@ -104,16 +103,9 @@ export const Layout = ({
   }, [user?.settings?.sidebarAutoHide]);
 
   useEffect(() => {
-    if (currentView === AppRoute.SUMMER && prevView !== AppRoute.SUMMER) {
-      setShowWave(true);
-      const timer = setTimeout(() => setShowWave(false), 800);
-      return () => clearTimeout(timer);
-    }
     setPrevView(currentView);
-  }, [currentView, prevView]);
+  }, [currentView]);
 
-  const [isVaporMusicOpen, setIsVaporMusicOpen] = useState(false);
-  const [isVaporMusicFullScreen, setIsVaporMusicFullScreen] = useState(false);
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
@@ -132,26 +124,12 @@ export const Layout = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    const handleToggle = (e) => {
-      setIsVaporMusicOpen(true);
-      if (e.detail?.fullScreen !== undefined) {
-        setIsVaporMusicFullScreen(e.detail.fullScreen);
-      } else {
-        setIsVaporMusicFullScreen(prev => !prev);
-      }
-    };
-    window.addEventListener('toggle-spotify-player', handleToggle);
-    return () => window.removeEventListener('toggle-spotify-player', handleToggle);
-  }, []);
-
   const navItems = [
     { id: AppRoute.HOME, icon: House, label: 'Home', isReleased: true },
     { id: AppRoute.LIBRARY, icon: Gamepad2, label: 'Games', isReleased: true },
-    { id: AppRoute.APPS, icon: LayoutGrid, label: 'Apps', isReleased: false },
+    { id: AppRoute.APPS, icon: LayoutGrid, label: 'Apps', isReleased: true },
     { id: AppRoute.CODES, icon: Key, label: 'Codes', isReleased: true },
     { id: AppRoute.PROXY, icon: Globe, label: 'Proxy', isReleased: true },
-    { id: AppRoute.CUSTOMIZATION, icon: Palette, label: 'Style', isReleased: false },
     { id: AppRoute.SETTINGS, icon: SettingsIcon, label: 'Config', isReleased: true },
   ].filter(item => {
     if (user?.settings?.hideUnreleased && item.isReleased === false) return false;
@@ -213,20 +191,23 @@ export const Layout = ({
         {/* Main Content Shell */}
         <motion.main 
           initial={false}
-          className="relative z-10 min-h-screen pb-24 lg:pb-0"
-          style={{ 
-            paddingLeft: window.innerWidth >= 1024 ? '136px' : 0 
+          animate={{
+            paddingLeft: window.innerWidth >= 1024 
+              ? (isSidebarExpanded ? '316px' : '120px') 
+              : 0
           }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+          className="relative z-10 min-h-screen pb-24 lg:pb-0"
         >
-          <div className={currentView === AppRoute.SUMMER ? "w-full h-full min-h-screen relative overflow-hidden" : "max-w-[140rem] mx-auto px-4 sm:px-6 md:px-8 lg:px-12"}>
+          <div className="max-w-[140rem] mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentView}
-                initial={currentView === AppRoute.SUMMER ? { opacity: 0, scale: 1.05, filter: 'brightness(2) blur(20px)' } : { opacity: 0, y: 15, scale: 0.99, filter: 'blur(10px)' }}
+                initial={{ opacity: 0, y: 15, scale: 0.99, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                exit={currentView === AppRoute.SUMMER ? { opacity: 0, scale: 0.95, filter: 'brightness(0.5) blur(20px)' } : { opacity: 0, y: -15, scale: 0.99, filter: 'blur(10px)' }}
+                exit={{ opacity: 0, y: -15, scale: 0.99, filter: 'blur(10px)' }}
                 transition={{ 
-                  duration: currentView === AppRoute.SUMMER ? 1.0 : (isPotatoMode ? 0.2 : 0.5), 
+                  duration: isPotatoMode ? 0.2 : 0.5, 
                   ease: [0.22, 1, 0.36, 1] 
                 }}
                 className="w-full h-full"
@@ -270,15 +251,6 @@ export const Layout = ({
         <div key="fps-widget" className={`fixed bottom-6 z-[100] hidden md:block transition-all duration-500 ${user?.isAdmin ? 'right-28' : 'right-6'}`}>
           <FPSCounter />
         </div>
-      )}
-
-      {currentView !== AppRoute.SPOTIFY && (
-        <SpotifyWindow 
-          isOpen={isVaporMusicOpen} 
-          onClose={() => setIsVaporMusicOpen(false)} 
-          isFullScreen={isVaporMusicFullScreen}
-          onToggleFullScreen={() => setIsVaporMusicFullScreen(!isVaporMusicFullScreen)}
-        />
       )}
     </div>
   );

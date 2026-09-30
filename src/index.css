@@ -38,8 +38,8 @@
   --primary: #3b82f6;
   --primary-rgb: 59, 130, 246;
   --primary-foreground: #ffffff;
-  --accent: #22d3ee;
-  --accent-rgb: 34, 211, 238;
+  --accent: #a855f7;
+  --accent-rgb: 168, 85, 247;
   --muted: rgba(255, 255, 255, 0.03);
   --muted-foreground: rgba(255, 255, 255, 0.5);
   --ring: #3b82f6;
@@ -567,7 +567,7 @@ html, body {
 
 /* Theme Overrides */
 /* Map theme variables to standard tailwind variables for card backgrounds & border colors */
-.theme-cyan, .theme-emerald, .theme-violet, .theme-cobalt, .theme-gold, .theme-fire, .theme-rainbow, .theme-spongebob, .theme-kanye, .theme-galaxy, .theme-hologram, .theme-ironman, .theme-synthwave, .theme-usa, .theme-void, .theme-retrofuture, .theme-tester, .theme-owner, .theme-black-white {
+.theme-cyan, .theme-emerald, .theme-violet, .theme-cobalt, .theme-gold, .theme-fire, .theme-rainbow, .theme-spongebob, .theme-kanye, .theme-galaxy, .theme-hologram, .theme-ironman, .theme-synthwave, .theme-usa, .theme-void, .theme-tester, .theme-owner {
   --card: var(--panel-bg);
   --border: var(--panel-border);
   --ring: var(--primary);
@@ -575,8 +575,8 @@ html, body {
 }
 
 /* Core Safe Rescue Shield to prevent sidebar squishing, layout bugs, or theme spillover in navbar/panel docks */
-.theme-cyan .global-sidebar-panel, .theme-emerald .global-sidebar-panel, .theme-violet .global-sidebar-panel, .theme-cobalt .global-sidebar-panel, .theme-gold .global-sidebar-panel, .theme-fire .global-sidebar-panel, .theme-rainbow .global-sidebar-panel, .theme-spongebob .global-sidebar-panel, .theme-kanye .global-sidebar-panel, .theme-galaxy .global-sidebar-panel, .theme-hologram .global-sidebar-panel, .theme-ironman .global-sidebar-panel, .theme-synthwave .global-sidebar-panel, .theme-usa .global-sidebar-panel, .theme-void .global-sidebar-panel, .theme-retrofuture .global-sidebar-panel, .theme-tester .global-sidebar-panel, .theme-owner .global-sidebar-panel, .theme-black-white .global-sidebar-panel,
-.theme-cyan aside, .theme-emerald aside, .theme-violet aside, .theme-cobalt aside, .theme-gold aside, .theme-fire aside, .theme-rainbow aside, .theme-spongebob aside, .theme-kanye aside, .theme-galaxy aside, .theme-hologram aside, .theme-ironman aside, .theme-usa aside, .theme-void aside, .theme-retrofuture aside, .theme-tester aside, .theme-owner aside, .theme-black-white aside,
+.theme-cyan .global-sidebar-panel, .theme-emerald .global-sidebar-panel, .theme-violet .global-sidebar-panel, .theme-cobalt .global-sidebar-panel, .theme-gold .global-sidebar-panel, .theme-fire .global-sidebar-panel, .theme-rainbow .global-sidebar-panel, .theme-spongebob .global-sidebar-panel, .theme-kanye .global-sidebar-panel, .theme-galaxy .global-sidebar-panel, .theme-hologram .global-sidebar-panel, .theme-ironman .global-sidebar-panel, .theme-synthwave .global-sidebar-panel, .theme-usa .global-sidebar-panel, .theme-void .global-sidebar-panel, .theme-tester .global-sidebar-panel, .theme-owner .global-sidebar-panel,
+.theme-cyan aside, .theme-emerald aside, .theme-violet aside, .theme-cobalt aside, .theme-gold aside, .theme-fire aside, .theme-rainbow aside, .theme-spongebob aside, .theme-kanye aside, .theme-galaxy aside, .theme-hologram aside, .theme-ironman aside, .theme-usa aside, .theme-void aside, .theme-tester aside, .theme-owner aside,
 .global-sidebar-panel, aside {
   background: rgba(0, 0, 0, 0.6) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -586,8 +586,8 @@ html, body {
 }
 
 /* Remove all layout pseudo-elements sweeps on menus/sidebars */
-.theme-cyan .global-sidebar-panel::before, .theme-emerald .global-sidebar-panel::before, .theme-violet .global-sidebar-panel::before, .theme-cobalt .global-sidebar-panel::before, .theme-gold .global-sidebar-panel::before, .theme-fire .global-sidebar-panel::before, .theme-rainbow .global-sidebar-panel::before, .theme-spongebob .global-sidebar-panel::before, .theme-kanye .global-sidebar-panel::before, .theme-galaxy .global-sidebar-panel::before, .theme-hologram .global-sidebar-panel::before, .theme-ironman .global-sidebar-panel::before, .theme-usa .global-sidebar-panel::before, .theme-void .global-sidebar-panel::before, .theme-retrofuture .global-sidebar-panel::before, .theme-tester .global-sidebar-panel::before, .theme-owner .global-sidebar-panel::before, .theme-black-white .global-sidebar-panel::before,
-.theme-cyan aside::before, .theme-emerald aside::before, .theme-violet aside::before, .theme-cobalt aside::before, .theme-gold aside::before, .theme-fire aside::before, .theme-rainbow aside::before, .theme-spongebob aside::before, .theme-kanye aside::before, .theme-galaxy aside::before, .theme-hologram aside::before, .theme-ironman aside::before, .theme-usa aside::before, .theme-void aside::before, .theme-retrofuture aside::before, .theme-tester aside::before, .theme-owner aside::before, .theme-black-white aside::before,
+.theme-cyan .global-sidebar-panel::before, .theme-emerald .global-sidebar-panel::before, .theme-violet .global-sidebar-panel::before, .theme-cobalt .global-sidebar-panel::before, .theme-gold .global-sidebar-panel::before, .theme-fire .global-sidebar-panel::before, .theme-rainbow .global-sidebar-panel::before, .theme-spongebob .global-sidebar-panel::before, .theme-kanye .global-sidebar-panel::before, .theme-galaxy .global-sidebar-panel::before, .theme-hologram .global-sidebar-panel::before, .theme-ironman .global-sidebar-panel::before, .theme-usa .global-sidebar-panel::before, .theme-void .global-sidebar-panel::before, .theme-tester .global-sidebar-panel::before, .theme-owner .global-sidebar-panel::before,
+.theme-cyan aside::before, .theme-emerald aside::before, .theme-violet aside::before, .theme-cobalt aside::before, .theme-gold aside::before, .theme-fire aside::before, .theme-rainbow aside::before, .theme-spongebob aside::before, .theme-kanye aside::before, .theme-galaxy aside::before, .theme-hologram aside::before, .theme-ironman aside::before, .theme-usa aside::before, .theme-void aside::before, .theme-tester aside::before, .theme-owner aside::before,
 .global-sidebar-panel::after, aside::after {
   content: none !important;
   display: none !important;
@@ -604,33 +604,33 @@ html, body {
 }
 
 .theme-emerald {
-  --primary: #059669;
-  --primary-glow: rgba(5, 150, 105, 0.4);
-  --glow: 0 0 20px rgba(5, 150, 105, 0.4);
-  --accent: #10b981;
-  --background: #022c22;
-  --panel-bg: rgba(2, 44, 34, 0.6);
-  --panel-border: rgba(16, 185, 129, 0.4);
+  --primary: #39ff14;
+  --primary-glow: rgba(57, 255, 20, 0.4);
+  --glow: 0 0 20px rgba(57, 255, 20, 0.4);
+  --accent: #22c55e;
+  --background: #020804;
+  --panel-bg: rgba(2, 8, 4, 0.6);
+  --panel-border: rgba(57, 255, 20, 0.4);
 }
 
 .theme-violet {
-  --primary: #a78bfa;
-  --primary-glow: rgba(167, 139, 250, 0.4);
-  --glow: 0 0 20px rgba(167, 139, 250, 0.4);
-  --accent: #8b5cf6;
-  --background: #1e1b4b;
-  --panel-bg: rgba(30, 27, 75, 0.6);
-  --panel-border: rgba(167, 139, 250, 0.4);
+  --primary: #bf80ff;
+  --primary-glow: rgba(191, 128, 255, 0.4);
+  --glow: 0 0 20px rgba(191, 128, 255, 0.4);
+  --accent: #a855f7;
+  --background: #130a1c;
+  --panel-bg: rgba(19, 10, 28, 0.6);
+  --panel-border: rgba(191, 128, 255, 0.4);
 }
 
 .theme-cobalt {
-  --primary: #3b82f6;
-  --primary-glow: rgba(59, 130, 246, 0.4);
-  --glow: 0 0 20px rgba(59, 130, 246, 0.4);
-  --accent: #2563eb;
-  --background: #0f172a;
-  --panel-bg: rgba(15, 23, 42, 0.6);
-  --panel-border: rgba(59, 130, 246, 0.4);
+  --primary: #2563eb;
+  --primary-glow: rgba(37, 99, 235, 0.4);
+  --glow: 0 0 20px rgba(37, 99, 235, 0.4);
+  --accent: #1d4ed8;
+  --background: #030712;
+  --panel-bg: rgba(3, 7, 18, 0.6);
+  --panel-border: rgba(37, 99, 235, 0.4);
 }
 
 .theme-gold {
@@ -902,18 +902,6 @@ html, body {
   transform: translateY(-8px) scale(1.02) !important;
 }
 
-/* Polished Chrome Retrofuture Theme */
-.theme-retrofuture .proto-card, .theme-retrofuture .proto-panel-surface {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(16, 185, 129, 0.08)) !important;
-  border: 1.5px solid #10b981 !important;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15) !important;
-}
-.theme-retrofuture .proto-card:hover {
-  border-color: #34d399 !important;
-  box-shadow: 0 0 35px rgba(16, 185, 129, 0.4) !important;
-  transform: translateY(-8px) scale(1.02) !important;
-}
-
 /* System Diagnostic Tester Theme */
 .theme-tester .proto-card, .theme-tester .proto-panel-surface {
   background: rgba(4, 5, 10, 0.95) !important;
@@ -935,18 +923,6 @@ html, body {
 .theme-owner .proto-card:hover {
   border-color: #f59e0b !important;
   box-shadow: 0 0 45px rgba(251, 191, 36, 0.5) !important;
-  transform: translateY(-8px) scale(1.02) !important;
-}
-
-/* Black & White Sleek Monochrome */
-.theme-black-white .proto-card, .theme-black-white .proto-panel-surface {
-  background: #000000 !important;
-  border: 2px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
-}
-.theme-black-white .proto-card:hover {
-  border-color: #ffffff !important;
-  box-shadow: 0 0 35px rgba(255, 255, 255, 0.3) !important;
   transform: translateY(-8px) scale(1.02) !important;
 }
 
@@ -1377,25 +1353,7 @@ html, body {
   text-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
 
-.theme-retrofuture {
-  --primary: #f59e0b;
-  --primary-glow: rgba(245, 158, 11, 0.4);
-  --glow: 0 0 20px rgba(245, 158, 11, 0.4);
-  --accent: #14b8a6;
-  --background: #0f172a;
-  --panel-bg: rgba(15, 23, 42, 0.8);
-  --panel-border: #f59e0b;
-}
 
-.theme-retrofuture .proto-backdrop-a {
-  background: radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.1) 0%, transparent 70%);
-}
-
-.theme-retrofuture .proto-panel-surface {
-  border: 1px solid rgba(245, 158, 11, 0.5);
-  box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.1);
-  background: rgba(15, 23, 42, 0.9);
-}
 
 .theme-tester {
   --primary: #3b82f6;
@@ -1646,204 +1604,7 @@ html, body {
   to { background-position: 200% center; }
 }
 
-.theme-black-white {
-  --primary: #ffffff;
-  --primary-glow: rgba(255, 255, 255, 0.4);
-  --glow: 0 0 20px rgba(255, 255, 255, 0.4);
-  --accent: #a1a1aa;
-  --background: #000000;
-  --panel-bg: rgba(0, 0, 0, 0.6);
-  --panel-border: rgba(255, 255, 255, 0.1);
-}
 
-.theme-black-white .proto-backdrop-a {
-  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-}
-
-.theme-black-white .proto-backdrop-b {
-  background: radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-}
-
-.theme-black-white .proto-backdrop-c {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 60%);
-}
-
-.theme-black-white .proto-rail-link-active {
-  background: #ffffff !important;
-  color: #000000 !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3) !important;
-}
-
-.theme-black-white .proto-rail-link-active svg {
-  color: #000000 !important;
-}
-
-.theme-black-white .nav-item.active {
-  background: #ffffff !important;
-  color: #000000 !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3) !important;
-}
-
-.theme-black-white .nav-item.active svg,
-.theme-black-white .nav-item.active span {
-  color: #000000 !important;
-}
-
-.theme-black-white .bg-card {
-  background-color: rgba(255, 255, 255, 0.04) !important;
-}
-
-.theme-black-white .border-border {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.theme-black-white .text-muted-foreground {
-  color: rgba(255, 255, 255, 0.6) !important;
-}
-
-.theme-black-white .proto-btn-main {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border-color: #ffffff !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-}
-
-.theme-black-white .proto-btn-secondary {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-}
-
-.theme-black-white .text-primary {
-  color: #ffffff !important;
-}
-
-.theme-black-white .bg-primary {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-.theme-black-white .border-primary {
-  border-color: #ffffff !important;
-}
-
-.theme-black-white .shadow-primary {
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-}
-
-.theme-black-white .bg-theme {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-.theme-black-white .text-theme {
-  color: #ffffff !important;
-}
-
-.theme-black-white .border-theme {
-  border-color: #ffffff !important;
-}
-
-.theme-black-white .shadow-theme {
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-}
-
-.theme-black-white .bg-primary {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-.theme-black-white .text-primary {
-  color: #ffffff !important;
-}
-
-.theme-black-white .border-primary {
-  border-color: #ffffff !important;
-}
-
-.theme-black-white .bg-secondary {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  color: #ffffff !important;
-}
-
-.theme-black-white .bg-accent {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-.theme-black-white .text-accent-foreground {
-  color: #000000 !important;
-}
-
-.theme-black-white .bg-destructive {
-  background-color: #ff0000 !important;
-  color: #ffffff !important;
-}
-
-.theme-black-white .text-destructive {
-  color: #ff0000 !important;
-}
-
-.theme-black-white .border-destructive {
-  border-color: #ff0000 !important;
-}
-
-.theme-black-white .bg-muted {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-.theme-black-white .text-muted-foreground {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.theme-black-white .bg-card {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(20px) !important;
-}
-
-.theme-black-white .border-border {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.theme-black-white .hover\:bg-theme\/90:hover {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-}
-
-.theme-black-white .hover\:bg-primary\/90:hover {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-}
-
-.theme-black-white .hover\:bg-accent:hover {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-.theme-black-white .hover\:text-accent-foreground:hover {
-  color: #000000 !important;
-}
-
-.theme-black-white .proto-btn-main {
-  background: #ffffff !important;
-  color: #000000 !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3) !important;
-}
-
-.theme-black-white .proto-btn-main:hover {
-  box-shadow: 0 0 40px #ffffff !important;
-  transform: translateY(-2px) !important;
-}
-
-.theme-black-white .proto-btn-secondary {
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.theme-black-white .proto-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: #ffffff !important;
-}
 
 /* Reduce Glow Setting Implementation */
 .reduce-glow * {
@@ -2221,34 +1982,24 @@ img[src*="glitch_avatar_artwork"] {
   border-color: #ffffff !important;
 }
 
-.theme-black-white img[src*="glitch_avatar_artwork"] {
-  filter: grayscale(1) contrast(1.6) drop-shadow(0 0 12px rgba(255, 255, 255, 0.6)) !important;
-  border-color: #ffffff !important;
-}
-
 .theme-cyan img[src*="glitch_avatar_artwork"] {
   filter: hue-rotate(0deg) saturate(1.8) drop-shadow(0 0 12px #00f2ff) !important;
   border-color: #00f2ff !important;
 }
 
 .theme-violet img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(60deg) saturate(1.8) drop-shadow(0 0 12px #a78bfa) !important;
-  border-color: #a78bfa !important;
+  filter: hue-rotate(60deg) saturate(1.8) drop-shadow(0 0 12px #bf80ff) !important;
+  border-color: #bf80ff !important;
 }
 
 .theme-cobalt img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(45deg) saturate(2) drop-shadow(0 0 12px #3b82f6) !important;
-  border-color: #3b82f6 !important;
+  filter: hue-rotate(45deg) saturate(2) drop-shadow(0 0 12px #2563eb) !important;
+  border-color: #2563eb !important;
 }
 
 .theme-emerald img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(150deg) saturate(1.6) drop-shadow(0 0 12px #059669) !important;
-  border-color: #059669 !important;
-}
-
-.theme-retrofuture img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(180deg) saturate(2) drop-shadow(0 0 12px #84cc16) !important;
-  border-color: #84cc16 !important;
+  filter: hue-rotate(150deg) saturate(1.6) drop-shadow(0 0 12px #39ff14) !important;
+  border-color: #39ff14 !important;
 }
 
 .theme-galaxy img[src*="glitch_avatar_artwork"] {
@@ -2257,23 +2008,18 @@ img[src*="glitch_avatar_artwork"] {
 }
 
 .theme-synthwave img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(110deg) saturate(2) drop-shadow(0 0 12px #ec4899) !important;
-  border-color: #ec4899 !important;
+  filter: hue-rotate(110deg) saturate(2) drop-shadow(0 0 12px #ff007f) !important;
+  border-color: #ff007f !important;
 }
 
 .theme-gold img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(240deg) saturate(1.5) brightness(1.2) drop-shadow(0 0 15px #fbbf24) !important;
-  border-color: #fbbf24 !important;
+  filter: hue-rotate(240deg) saturate(1.5) brightness(1.2) drop-shadow(0 0 15px #ffd700) !important;
+  border-color: #ffd700 !important;
 }
 
 .theme-fire img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(330deg) saturate(2) drop-shadow(0 0 12px #ea580c) !important;
-  border-color: #ea580c !important;
-}
-
-.theme-interstellar img[src*="glitch_avatar_artwork"] {
-  filter: hue-rotate(10deg) saturate(1.5) drop-shadow(0 0 12px #0284c7) !important;
-  border-color: #0284c7 !important;
+  filter: hue-rotate(330deg) saturate(2) drop-shadow(0 0 12px #ff4500) !important;
+  border-color: #ff4500 !important;
 }
 
 .theme-rainbow img[src*="glitch_avatar_artwork"] {
@@ -2409,4 +2155,151 @@ img[src*="glitch_avatar_artwork"] {
 .theme-doge .nav-item.active span {
   color: #000000 !important;
 }
+
+/* Global Fix: Prevent last-letter clipping on italic & tightly-tracked headings and badges */
+.italic {
+  padding-right: 0.18em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+}
+
+h1.italic, h2.italic, h3.italic, h4.italic, h5.italic, h6.italic {
+  padding-right: 0.22em;
+}
+
+.truncate.italic, .italic.truncate {
+  padding-right: 0.3em;
+}
+
+/* ==========================================================================
+   LEVEL 100+ ELITE ANIMATED PROFILE BANNERS
+   ========================================================================== */
+
+/* 1. Golden Sovereign (Level 100) */
+@keyframes goldShimmerSweep {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes goldRaySpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes goldSparkleFloat {
+  0%, 100% { transform: translateY(0px) scale(0.8); opacity: 0.3; }
+  50% { transform: translateY(-12px) scale(1.2); opacity: 0.9; }
+}
+
+.banner-gold-shimmer {
+  background: linear-gradient(115deg, #78350f 0%, #b45309 20%, #f59e0b 40%, #fef08a 50%, #d97706 60%, #92400e 80%, #78350f 100%);
+  background-size: 250% 250%;
+  animation: goldShimmerSweep 7s ease infinite;
+}
+
+/* 2. Phantom Supernova (Level 150) */
+@keyframes supernovaPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 0 25px rgba(244, 63, 94, 0.6)); }
+  50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 50px rgba(236, 72, 153, 0.9)); }
+}
+
+@keyframes shockwaveExpand {
+  0% { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.banner-supernova-bg {
+  background: radial-gradient(circle at 70% 45%, #ec4899 0%, #be185d 25%, #831843 50%, #3b0764 75%, #090314 100%);
+  background-size: 180% 180%;
+  animation: goldShimmerSweep 9s ease infinite;
+}
+
+/* 3. Quantum Hyperdrive (Level 200) */
+@keyframes hyperdriveStream {
+  0% { transform: translateX(120%); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateX(-120%); opacity: 0; }
+}
+
+@keyframes quantumGridFlow {
+  0% { background-position: 0 0; }
+  100% { background-position: -60px 0; }
+}
+
+.banner-quantum-bg {
+  background: linear-gradient(90deg, #022c22 0%, #083344 25%, #0e7490 50%, #06b6d4 75%, #0369a1 100%);
+  background-size: 200% 200%;
+  animation: goldShimmerSweep 6s ease-in-out infinite;
+}
+
+/* 4. Void Dragon Sovereign (Level 300) */
+@keyframes voidDragonFlame {
+  0%, 100% { transform: translateY(0) scaleY(1); opacity: 0.75; }
+  50% { transform: translateY(-8px) scaleY(1.12); opacity: 0.95; }
+}
+
+@keyframes voidEmberDrift {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: translate(-30px, -45px) scale(1.1); opacity: 0; }
+}
+
+.banner-void-dragon-bg {
+  background: radial-gradient(ellipse at 30% 60%, #064e3b 0%, #022c22 35%, #021a14 65%, #000000 100%);
+}
+
+/* 5. Astral Demigod Horizon (Level 500) */
+@keyframes demigodRaysAscend {
+  0%, 100% { opacity: 0.55; transform: scaleY(1); }
+  50% { opacity: 0.9; transform: scaleY(1.18); }
+}
+
+@keyframes demigodHaloRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.banner-demigod-bg {
+  background: linear-gradient(135deg, #be123c 0%, #fb7185 30%, #f97316 60%, #f59e0b 90%);
+  background-size: 220% 220%;
+  animation: goldShimmerSweep 8s ease infinite;
+}
+
+/* 6. Celestial Singularity (Level 750) */
+@keyframes accretionVortexSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes singularityJetPulse {
+  0%, 100% { opacity: 0.4; transform: scaleX(0.95); }
+  50% { opacity: 0.85; transform: scaleX(1.15); }
+}
+
+.banner-singularity-bg {
+  background: radial-gradient(circle at 65% 50%, #431407 0%, #1c0502 45%, #0a0101 80%, #000000 100%);
+}
+
+/* 7. The Absolute Pinnacle Apex (Level 999) */
+@keyframes rainbowHoloShift {
+  0% { filter: hue-rotate(0deg) saturate(160%); }
+  50% { filter: hue-rotate(180deg) saturate(200%); }
+  100% { filter: hue-rotate(360deg) saturate(160%); }
+}
+
+@keyframes holoSheenPass {
+  0% { transform: translateX(-150%) skewX(-25deg); }
+  100% { transform: translateX(250%) skewX(-25deg); }
+}
+
+.banner-pinnacle-holo {
+  background: linear-gradient(125deg, #ef4444, #f59e0b, #10b981, #06b6d4, #6366f1, #d946ef, #ef4444);
+  background-size: 300% 300%;
+  animation: goldShimmerSweep 8s linear infinite, rainbowHoloShift 14s linear infinite;
+}
+
 

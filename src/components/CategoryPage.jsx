@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Star, Play, Info, ChevronRight, LayoutGrid, LayoutList, ArrowLeft } from 'lucide-react';
+import { Search, LayoutGrid, LayoutList, Gamepad2, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameCard } from './GameCard';
 import { CATEGORIES } from '../constants';
 
-export const CategoryPage = ({ categoryId, games, favorites, onToggleFavorite, onPlayGame }) => {
+export const CategoryPage = ({ categoryId, games, favorites = [], onToggleFavorite, onPlayGame, onBack, lockedGames = {} }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   
-  const category = CATEGORIES.find(c => c.id === categoryId) || { name: 'Unknown', icon: '❓', color: 'text-white' };
+  const category = CATEGORIES.find(c => c.id === categoryId) || { name: categoryId, icon: '🎮', color: 'text-cyan-400' };
   
   const filteredGames = useMemo(() => {
     const list = games.filter(g => {
@@ -22,109 +22,99 @@ export const CategoryPage = ({ categoryId, games, favorites, onToggleFavorite, o
   }, [games, categoryId, searchQuery]);
 
   return (
-    <div className="min-h-screen pt-32 pb-24 relative overflow-hidden">
-      {/* Background Decorative Elements */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse-soft" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[120px] animate-pulse-soft" style={{ animationDelay: '1.5s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.03)_0%,transparent_70%)]" />
-      </div>
-
-      <div className="max-w-[100rem] mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
-        {/* Header */}
-        <div className="mb-24 flex flex-col lg:flex-row lg:items-end justify-between gap-12">
-          <div className="max-w-3xl">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-2xl mb-8"
+    <div className="min-h-screen pt-8 pb-32 px-4 sm:px-8 max-w-7xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold uppercase tracking-wider mb-4 border border-white/10 transition-all"
             >
-              <span className="text-xl drop-shadow-[0_0_10px_white]">{category.icon}</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40 italic">ARCHIVE SECTOR // {categoryId.toUpperCase()}</span>
-            </motion.div>
-            
-            <motion.h1 
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, type: "spring", stiffness: 100, damping: 20 }}
-              className="text-7xl sm:text-8xl md:text-9xl font-black text-white tracking-tighter uppercase italic leading-[0.85]"
-            >
-              {category.name} <br />
-              <span className="text-white/20 drop-shadow-[0_0_80px_rgba(255,255,255,0.1)]">PROTOCOL</span>
-            </motion.h1>
-          </div>
+              <ArrowLeft size={14} />
+              <span>Back to Library</span>
+            </button>
+          )}
 
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative w-full sm:w-96 group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-white/10 to-transparent blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-white transition-colors" size={20} />
-              <input 
-                type="text" 
-                placeholder="SEARCH SECTOR..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-16 pl-16 pr-8 rounded-[2rem] bg-black/40 backdrop-blur-3xl border border-white/10 text-white font-black text-xs uppercase tracking-widest focus:outline-none focus:border-white/30 transition-all italic"
-              />
-            </div>
-            
-            <div className="flex gap-3 p-2 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2rem]">
-              <button 
-                onClick={() => setViewMode('grid')}
-                className={`p-3.5 rounded-2xl transition-all ${viewMode === 'grid' ? 'bg-white text-black shadow-[0_0_30px_white]' : 'text-white/20 hover:text-white hover:bg-white/5'}`}
-              >
-                <LayoutGrid size={22} />
-              </button>
-              <button 
-                onClick={() => setViewMode('list')}
-                className={`p-3.5 rounded-2xl transition-all ${viewMode === 'list' ? 'bg-white text-black shadow-[0_0_30px_white]' : 'text-white/20 hover:text-white hover:bg-white/5'}`}
-              >
-                <LayoutList size={22} />
-              </button>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">{category.icon}</span>
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-black text-white uppercase tracking-tight italic leading-none">
+                {category.name}
+              </h1>
+              <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest mt-2">
+                {filteredGames.length} Games in Category
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Games Grid */}
-        {filteredGames.length > 0 ? (
-          <div className={`grid gap-10 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' : 'grid-cols-1'}`}>
-            <AnimatePresence mode="popLayout">
-              {filteredGames.map((game, i) => (
-                <GameCard 
-                  key={game.id}
-                  game={game}
-                  isFavorite={favorites.includes(game.id)}
-                  onToggleFavorite={onToggleFavorite}
-                  onPlay={onPlayGame}
-                  onInfo={() => {}}
-                  delay={i * 0.03}
-                />
-              ))}
-            </AnimatePresence>
+        {/* Controls */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-72">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <input 
+              type="text" 
+              placeholder={`Search in ${category.name}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#121620] border border-white/10 focus:border-cyan-500/50 rounded-xl py-3 pl-10 pr-4 text-white text-xs font-bold focus:outline-none transition-all placeholder:text-white/30"
+            />
           </div>
-        ) : (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="py-32 flex flex-col items-center justify-center text-center space-y-8"
-          >
-            <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-white/20">
-              <Search size={48} />
-            </div>
-            <div className="space-y-4">
-              <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">No Signals Detected</h2>
-              <p className="text-white/40 text-lg font-medium max-w-md mx-auto leading-relaxed">
-                We couldn't find any games matching your search criteria in the {category.name} sector.
-              </p>
-            </div>
+          
+          <div className="flex gap-1 p-1 bg-[#121620] border border-white/10 rounded-xl">
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={`p-2.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-cyan-500 text-black shadow-md' : 'text-white/40 hover:text-white'}`}
+              title="Grid View"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-cyan-500 text-black shadow-md' : 'text-white/40 hover:text-white'}`}
+              title="List View"
+            >
+              <LayoutList size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Games Grid */}
+      {filteredGames.length > 0 ? (
+        <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+          <AnimatePresence mode="popLayout">
+            {filteredGames.map((game, i) => (
+              <GameCard 
+                key={game.id}
+                game={game}
+                isFavorite={favorites.includes(game.id)}
+                isPinned={favorites.includes(game.id)}
+                onTogglePin={onToggleFavorite}
+                onClick={onPlayGame}
+                lockInfo={lockedGames[game.id]}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="py-24 text-center border border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
+          <Gamepad2 size={40} className="mx-auto text-white/20 mb-3" />
+          <h3 className="text-xl font-black text-white uppercase italic tracking-tight">No Games Found</h3>
+          <p className="text-white/40 text-xs mt-1 max-w-sm mx-auto">
+            No games match your current filter in the {category.name} category.
+          </p>
+          {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all"
+              className="mt-4 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-cyan-400 text-xs font-bold uppercase tracking-wider border border-white/10 transition-all"
             >
               Clear Search
             </button>
-          </motion.div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

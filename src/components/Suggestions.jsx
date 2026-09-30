@@ -4,6 +4,7 @@ import { Send, ThumbsUp, ThumbsDown, MessageSquare, Plus, Clock, TrendingUp, Ale
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, limit, updateDoc, doc, arrayUnion, arrayRemove, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { filterProfanity } from '../lib/profanity';
+import { isPlatformOwner } from '../constants';
 
 export const Suggestions = ({ user, addNotification }) => {
   const [suggestions, setSuggestions] = useState([]);
@@ -275,7 +276,7 @@ export const Suggestions = ({ user, addNotification }) => {
                     )}
                   </div>
                   
-                    {(s.authorId === auth.currentUser?.uid || user.isAdmin || (auth.currentUser?.email && auth.currentUser.email.toLowerCase() === 'softball_chik_007@yahoo.com')) && (
+                    {(s.authorId === auth.currentUser?.uid || user.isAdmin || isPlatformOwner(user, auth.currentUser)) && (
                       <button 
                         onClick={(e) => {
                           e.preventDefault();
