@@ -2662,7 +2662,7 @@ const App = () => {
       } catch (e) {
         console.warn(e);
       }
-      setIsExitingCloak(true);
+      setIsExitingCloak(false);
       setIsCloaked(false);
       setCloakSequence('');
     } else {
@@ -2677,6 +2677,23 @@ const App = () => {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Don't trigger if user is typing in an input or textarea
+      const tag = e.target?.tagName?.toLowerCase();
+      const isInput = tag === 'input' || tag === 'textarea' || e.target?.isContentEditable;
+
+      if (!isInput) {
+        if (e.key === '`' || e.key === '~') {
+          e.preventDefault();
+          handleToggleCloak();
+          return;
+        }
+        if (e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+          e.preventDefault();
+          handleToggleCloak();
+          return;
+        }
+      }
+
       if (e.shiftKey) {
         if (e.key === '0') {
           const nextSeq = (cloakSequence + '0').slice(-4);
