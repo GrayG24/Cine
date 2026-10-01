@@ -28,7 +28,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { InteractiveBackground } from './components/InteractiveBackground';
 import { GameView } from './components/GameView';
 import { Bell, Star, Zap, Shield, Trophy, Palette, Layers, Bot, X, Crown, ZapOff, ShieldAlert, MessageSquare, Users, Send, Trash2, Megaphone, Settings as SettingsIcon, Activity, Sparkles, Ghost, BrainCircuit, Rocket, Plus, Award, Flame, User, AlertTriangle, Lock, Play, Waves, ChevronRight, Pin, Hammer } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, GoogleAuthProvider, signOut, signInWithRedirect, getRedirectResult, signInWithPopup } from 'firebase/auth';
@@ -2719,7 +2719,15 @@ const App = () => {
   }, [selectedPlayer, user]);
 
   const renderCurrentView = () => {
-    if (isAuthLoading) return <LoadingScreen />;
+    if (isAuthLoading) {
+      return (
+        <LoadingScreen 
+          key="auth-loading"
+          onComplete={() => setIsAuthLoading(false)} 
+          onCosmicEvent={handleCosmicEvent} 
+        />
+      );
+    }
 
     return (
       <div id="app-body" className="min-h-screen">

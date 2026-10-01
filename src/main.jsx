@@ -74,8 +74,176 @@ console.error = (...args) => {
   originalError.apply(console, args);
 };
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('CRITICAL APP CRASH CAUGHT BY BOUNDARY:', error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  handleReset = () => {
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem('cine_uncloaked');
+    } catch (e) {}
+    window.location.reload();
+  };
+
+  handleHardReset = () => {
+    try {
+      sessionStorage.clear();
+      localStorage.clear();
+    } catch (e) {}
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          backgroundColor: '#030712',
+          color: '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            maxWidth: '560px',
+            width: '100%',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '1.5rem',
+            padding: '2.5rem',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '1rem',
+              backgroundColor: 'rgba(244, 63, 94, 0.15)',
+              border: '1px solid rgba(244, 63, 94, 0.3)',
+              color: '#f43f5e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem auto',
+              fontSize: '28px'
+            }}>
+              ⚡
+            </div>
+
+            <h1 style={{
+              fontSize: '1.75rem',
+              fontWeight: 900,
+              letterSpacing: '-0.025em',
+              marginBottom: '0.75rem',
+              textTransform: 'uppercase'
+            }}>
+              Application Recovery
+            </h1>
+
+            <p style={{
+              fontSize: '0.875rem',
+              color: 'rgba(255, 255, 255, 0.6)',
+              marginBottom: '2rem',
+              lineHeight: 1.6
+            }}>
+              The platform encountered an unexpected runtime state. You can reload cleanly or reset your local session data below.
+            </p>
+
+            <div style={{
+              display: 'flex',
+              gap: '0.75rem',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              marginBottom: '1.5rem'
+            }}>
+              <button
+                onClick={this.handleReset}
+                style={{
+                  padding: '0.75rem 1.75rem',
+                  borderRadius: '0.75rem',
+                  backgroundColor: '#3b82f6',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.875rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Reload App
+              </button>
+
+              <button
+                onClick={this.handleHardReset}
+                style={{
+                  padding: '0.75rem 1.75rem',
+                  borderRadius: '0.75rem',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  cursor: 'pointer'
+                }}
+              >
+                Clear Cache & Reload
+              </button>
+            </div>
+
+            {this.state.error && (
+              <details style={{
+                marginTop: '1.5rem',
+                textAlign: 'left',
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                padding: '1rem',
+                borderRadius: '0.75rem',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}>
+                <summary style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer' }}>
+                  Diagnostics Details
+                </summary>
+                <pre style={{
+                  fontSize: '0.7rem',
+                  color: '#f87171',
+                  overflowX: 'auto',
+                  marginTop: '0.5rem',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'monospace'
+                }}>
+                  {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
+                </pre>
+              </details>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );
