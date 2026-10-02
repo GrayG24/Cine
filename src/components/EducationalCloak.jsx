@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 import { 
   Calculator, 
   Clock, 
@@ -465,12 +466,17 @@ export const EducationalCloak = ({ onToggleCloak }) => {
       setToUnit('pounds');
     } else if (type === 'temperature') {
       setFromUnit('Celsius');
-      setToUnit('Fahrenheit');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] text-[#1f2937] font-sans antialiased text-sm flex flex-col justify-between">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      className="min-h-screen bg-[#f3f4f6] text-[#1f2937] font-sans antialiased text-sm flex flex-col justify-between"
+    >
       
       <div>
         {/* Basic Header Bar */}
@@ -1051,6 +1057,6 @@ export const EducationalCloak = ({ onToggleCloak }) => {
         </div>
       </footer>
 
-    </div>
+    </motion.div>
   );
 };
