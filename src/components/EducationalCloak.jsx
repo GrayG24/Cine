@@ -19,7 +19,8 @@ import {
   CheckCheck, 
   RotateCcw,
   Play,
-  Pause
+  Pause,
+  ExternalLink
 } from 'lucide-react';
 
 const PRELOADED_DECKS = [
@@ -132,60 +133,25 @@ export const EducationalCloak = ({ onToggleCloak }) => {
   // Navigation tabs in study portal
   const [activeTab, setActiveTab] = useState('calculator'); // 'calculator' | 'timer' | 'flashcards' | 'notes' | 'tasks' | 'formulas' | 'converter'
   
-  // Stealth Cine Unlocking Triggers (Discreet, no loud banners)
-  const [footerClickCount, setFooterClickCount] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Search State & Cine Entry Flow
+  const [searchInput, setSearchInput] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
 
-  // Uncloak cleanly
+  // Uncloak cleanly into Cine
   const triggerCineLaunch = () => {
-    try {
-      sessionStorage.setItem('cine_uncloaked', 'true');
-    } catch (e) {
-      console.warn(e);
-    }
     if (onToggleCloak) {
       onToggleCloak();
     }
   };
 
-  // Stealth Footer Click Count (3 clicks unlocks Cine)
-  const handleFooterClick = () => {
-    const next = footerClickCount + 1;
-    setFooterClickCount(next);
-    if (next >= 3) {
-      setFooterClickCount(0);
-      triggerCineLaunch();
-    }
+  // Submit search query and navigate to Search Results view
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    const q = searchInput.trim();
+    if (!q) return;
+    setSubmittedQuery(q);
+    setActiveTab('search');
   };
-
-  // Search Bar Trigger: typing 'cine', 'games', 'play', or 'apex' immediately unlocks Cine
-  const handleSearchChange = (e) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-    const lower = val.toLowerCase().trim();
-    if (['cine', 'games', 'game', 'play', 'apex', '/cine', 'unlock', 'exit'].includes(lower)) {
-      setSearchQuery('');
-      triggerCineLaunch();
-    }
-  };
-
-  // Keyboard shortcut listener: Shift + C or ~ (tilde)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === '`' || e.key === '~') {
-        e.preventDefault();
-        triggerCineLaunch();
-        return;
-      }
-      if (e.shiftKey && (e.key === 'C' || e.key === 'c')) {
-        e.preventDefault();
-        triggerCineLaunch();
-        return;
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // --- TOOL 1: CALCULATOR STATE ---
   const [calcDisplay, setCalcDisplay] = useState('0');
@@ -498,17 +464,28 @@ export const EducationalCloak = ({ onToggleCloak }) => {
               </div>
             </div>
 
-            {/* Quick search / trigger */}
-            <div className="relative w-48 sm:w-64">
+            {/* Quick search input (No autocomplete, no suggestions) */}
+            <form onSubmit={handleSearchSubmit} className="relative w-48 sm:w-64">
               <input
                 type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search tools or references..."
-                className="w-full bg-gray-50 border border-gray-300 rounded px-2.5 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-gray-500 focus:bg-white"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search..."
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                name="school-search-query"
+                className="w-full bg-gray-50 border border-gray-300 rounded px-2.5 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-gray-500 focus:bg-white pr-7"
               />
-              <Search size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+              <button 
+                type="submit" 
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer p-0.5"
+                title="Search"
+              >
+                <Search size={13} />
+              </button>
+            </form>
 
           </div>
 
@@ -521,7 +498,8 @@ export const EducationalCloak = ({ onToggleCloak }) => {
               { id: 'notes', label: 'Notepad', icon: FileText },
               { id: 'tasks', label: 'Task List', icon: CheckSquare },
               { id: 'formulas', label: 'Formula Sheet', icon: BookMarked },
-              { id: 'converter', label: 'Unit Converter', icon: ArrowLeftRight }
+              { id: 'converter', label: 'Unit Converter', icon: ArrowLeftRight },
+              ...(activeTab === 'search' ? [{ id: 'search', label: `Results: "${submittedQuery}"`, icon: Search }] : [])
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1032,6 +1010,80 @@ export const EducationalCloak = ({ onToggleCloak }) => {
             </div>
           )}
 
+          {/* TAB 8: SEARCH RESULTS (ONLY WAY TO ACCESS CINE) */}
+          {activeTab === 'search' && (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div className="bg-white border border-gray-300 rounded p-4">
+                <form onSubmit={handleSearchSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Search tools or directory..."
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    className="flex-1 bg-gray-50 border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-gray-500 focus:bg-white"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded text-xs font-medium cursor-pointer"
+                  >
+                    Search
+                  </button>
+                </form>
+                <div className="mt-2 text-xs text-gray-500">
+                  Search results for: <span className="font-semibold text-gray-800">"{submittedQuery}"</span>
+                </div>
+              </div>
+
+              {/* Strict matching: 'cine' is the ONLY query that produces results */}
+              {submittedQuery.toLowerCase() === 'cine' ? (
+                <div className="bg-white border border-gray-300 rounded p-5 space-y-2 hover:border-gray-400 transition-colors">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400 font-mono text-[11px]">
+                    <span>platform.internal</span>
+                    <span>›</span>
+                    <span className="text-gray-600">cine</span>
+                    <span>›</span>
+                    <span className="text-gray-600">gateway</span>
+                  </div>
+                  <h3
+                    onClick={triggerCineLaunch}
+                    className="text-base font-semibold text-blue-700 hover:underline cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Cine - Media & Interactive Platform</span>
+                    <ExternalLink size={13} className="text-blue-600" />
+                  </h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Direct access gateway to the Cine platform interface, media cinema channels, live broadcasts, and entertainment dashboard.
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      onClick={triggerCineLaunch}
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium cursor-pointer flex items-center gap-1 shadow-xs"
+                    >
+                      <span>Enter Cine</span>
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-300 rounded p-8 text-center space-y-2">
+                  <div className="text-gray-400 mb-2">
+                    <Search size={28} className="mx-auto text-gray-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    No results found for "{submittedQuery}"
+                  </h3>
+                  <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                    No matching documents, courses, or utilities were found in the student directory.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -1045,10 +1097,8 @@ export const EducationalCloak = ({ onToggleCloak }) => {
           <div className="flex items-center gap-4 text-[11px]">
             <span>Terms of Use</span>
             <span>Privacy</span>
-            {/* Secret 3-click trigger on copyright year */}
             <span
-              onClick={handleFooterClick}
-              className="cursor-pointer select-none text-gray-400 hover:text-gray-500"
+              className="select-none text-gray-400"
               title="System reference"
             >
               © 2026 Reference Suite

@@ -864,14 +864,24 @@ const App = () => {
   }, []);
 
   const [isInitialLoading, setIsInitialLoading] = useState(false);
-  const [isCloaked, setIsCloaked] = useState(() => {
-    try {
-      return sessionStorage.getItem('cine_uncloaked') !== 'true';
-    } catch {
-      return true;
-    }
-  });
+  const [isCloaked, setIsCloaked] = useState(true);
   const [isExitingCloak, setIsExitingCloak] = useState(false);
+
+  // Dynamic Browser Tab Title and Favicon based on Cloak State
+  useEffect(() => {
+    const faviconEl = document.getElementById('app-favicon') || document.querySelector("link[rel*='icon']");
+    if (isCloaked) {
+      document.title = 'Student Tools';
+      if (faviconEl) {
+        faviconEl.setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>');
+      }
+    } else {
+      document.title = 'Cine';
+      if (faviconEl) {
+        faviconEl.setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>');
+      }
+    }
+  }, [isCloaked]);
   const [isGlitched, setIsGlitched] = useState(false);
   const [isRainbowChaos, setIsRainbowChaos] = useState(false);
   const [isFireStorm, setIsFireStorm] = useState(false);
@@ -2665,21 +2675,12 @@ const App = () => {
 
   const handleToggleCloak = () => {
     if (isCloaked) {
-      try {
-        sessionStorage.setItem('cine_uncloaked', 'true');
-      } catch (e) {
-        console.warn(e);
-      }
-      setIsExitingCloak(false);
       setIsCloaked(false);
+      setIsExitingCloak(true);
       setCloakSequence('');
     } else {
-      try {
-        sessionStorage.removeItem('cine_uncloaked');
-      } catch (e) {
-        console.warn(e);
-      }
       setIsCloaked(true);
+      setIsExitingCloak(false);
     }
   };
 
@@ -2689,20 +2690,15 @@ const App = () => {
       const tag = e.target?.tagName?.toLowerCase();
       const isInput = tag === 'input' || tag === 'textarea' || e.target?.isContentEditable;
 
-      if (!isInput) {
-        if (e.key === '`' || e.key === '~') {
-          e.preventDefault();
-          handleToggleCloak();
-          return;
-        }
-        if (e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+      if (!isInput && !isCloaked) {
+        if (e.key === '`' || e.key === '~' || (e.shiftKey && (e.key === 'C' || e.key === 'c'))) {
           e.preventDefault();
           handleToggleCloak();
           return;
         }
       }
 
-      if (e.shiftKey) {
+      if (e.shiftKey && !isCloaked) {
         if (e.key === '0') {
           const nextSeq = (cloakSequence + '0').slice(-4);
           setCloakSequence(nextSeq);
@@ -2724,6 +2720,7 @@ const App = () => {
   const handleLoadingComplete = React.useCallback(() => {
     setIsInitialLoading(false);
     setIsExitingCloak(false);
+    setIsAuthLoading(false);
   }, []);
 
   const selectPlayerModal = useMemo(() => {
@@ -2744,16 +2741,6 @@ const App = () => {
   }, [selectedPlayer, user]);
 
   const renderCurrentView = () => {
-    if (isAuthLoading) {
-      return (
-        <LoadingScreen 
-          key="auth-loading"
-          onComplete={() => setIsAuthLoading(false)} 
-          onCosmicEvent={handleCosmicEvent} 
-        />
-      );
-    }
-
     return (
       <div id="app-body" className="min-h-screen">
         {/* Global Banners Layer */}
