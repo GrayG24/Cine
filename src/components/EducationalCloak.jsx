@@ -436,11 +436,7 @@ export const EducationalCloak = ({ onToggleCloak }) => {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
+    <div 
       className="min-h-screen bg-[#f3f4f6] text-[#1f2937] font-sans antialiased text-sm flex flex-col justify-between"
     >
       
@@ -1107,6 +1103,6 @@ export const EducationalCloak = ({ onToggleCloak }) => {
         </div>
       </footer>
 
-    </motion.div>
+    </div>
   );
 };

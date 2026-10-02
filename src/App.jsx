@@ -2741,6 +2741,10 @@ const App = () => {
   }, [selectedPlayer, user]);
 
   const renderCurrentView = () => {
+    if (isCloaked) {
+      return <EducationalCloak onToggleCloak={handleToggleCloak} />;
+    }
+
     return (
       <div id="app-body" className="min-h-screen">
         {/* Global Banners Layer */}
